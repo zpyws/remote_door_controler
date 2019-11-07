@@ -102,6 +102,6 @@ void led(rt_uint32_t led, rt_uint32_t value)
 		break;
 	}
 }
-FINSH_FUNCTION_EXPORT(led, [Y]set led[0-2] on[1] or off[0].)
+FINSH_FUNCTION_EXPORT(led, [Y]set led[1-3] on[1] or off[0].)
 #endif
 

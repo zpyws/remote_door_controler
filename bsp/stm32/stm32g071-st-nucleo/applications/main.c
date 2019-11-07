@@ -12,6 +12,7 @@
 #include <rtdevice.h>
 #include <board.h>
 #include "led.h"
+#include "relay.h"
 
 /* defined the LED pin: PA5 */
 #define LED0_PIN     GET_PIN(A, 5)
@@ -22,6 +23,7 @@ int main(void)
     /* set LED0 pin mode to output */
     rt_pin_mode(LED0_PIN, PIN_MODE_OUTPUT);
 	rt_hw_led_init();
+	rt_hw_relay_init();
 
     while (count++)
     {
