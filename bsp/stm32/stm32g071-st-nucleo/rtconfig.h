@@ -38,7 +38,7 @@
 #define RT_USING_DEVICE
 #define RT_USING_CONSOLE
 #define RT_CONSOLEBUF_SIZE 128
-#define RT_CONSOLE_DEVICE_NAME "uart1"
+#define RT_CONSOLE_DEVICE_NAME "uart2"
 #define RT_VER_NUM 0x40000
 #define ARCH_ARM
 #define ARCH_ARM_CORTEX_M
@@ -165,8 +165,9 @@
 
 #define BSP_USING_GPIO
 #define BSP_USING_UART
-#define BSP_USING_LPUART1
+//#define BSP_USING_LPUART1
 #define BSP_USING_UART1			//by yangwensen@20191108
+#define BSP_USING_UART2			//by yangwensen@20191108
 
 /* Board extended module Drivers */
 
