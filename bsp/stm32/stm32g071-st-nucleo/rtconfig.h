@@ -161,6 +161,8 @@
 #define AT_DEVICE_RECV_BUFF_LEN 512
 #define PKG_USING_AT_DEVICE_V160
 #define PKG_AT_DEVICE_VER_NUM 0x10600
+#define GSM_POWER_PIN 46				//by yangwensen@20191112
+#define AT_DEVICE_POWER_PIN 47			//by yangwensen@20191112
 
 /* IoT Cloud */
 

@@ -28,7 +28,6 @@
 
 #include <rtthread.h>
 #include <sys/socket.h>
-#include <board.h>			//by yangwensen@20191111
 
 #include <at.h>
 #include <at_socket.h>
@@ -1045,7 +1044,48 @@ static const struct at_urc urc_table[] = {
             goto __exit;                                                                                        \
         }                                                                                                       \
     } while(0);                                                                                                 \
-
+//======================================================================================================
+//by yangwensen@20191112
+static void ec20_power_on(void)
+{
+	rt_pin_write(GSM_POWER_PIN, PIN_HIGH);		//by yangwensen@20191112
+    rt_thread_mdelay(100);
+	
+#if 0
+    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
+        return;
+#endif
+    rt_pin_write(AT_DEVICE_POWER_PIN, PIN_HIGH);
+#if 0
+    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
+    {
+        rt_thread_mdelay(10);
+    }
+#endif
+	rt_thread_mdelay(550);
+    rt_pin_write(AT_DEVICE_POWER_PIN, PIN_LOW);
+}
+//by yangwensen@20191112
+static void ec20_power_off(void)
+{
+#if 0
+    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
+        return;
+#endif
+    rt_pin_write(AT_DEVICE_POWER_PIN, PIN_HIGH);
+#if 0
+    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
+    {
+        rt_thread_mdelay(10);
+    }
+#endif
+	rt_thread_mdelay(550);
+    rt_pin_write(AT_DEVICE_POWER_PIN, PIN_LOW);
+	
+    rt_thread_mdelay(50);
+	rt_pin_write(GSM_POWER_PIN, PIN_LOW);		//by yangwensen@20191112
+}
+//======================================================================================================
 static int ec20_netdev_set_info(struct netdev *netdev);
 static int ec20_netdev_check_link_status(struct netdev *netdev); 
 
@@ -1058,15 +1098,18 @@ static void ec20_init_thread_entry(void *parameter)
 #define CREG_RETRY                     10
 #define CGREG_RETRY                    20
 
-//by yangwensen@20191111
-#define GSM_POWER_PIN					GET_PIN(C, 14)	
-#define GSM_POWERKEY_PIN				GET_PIN(C, 15)
-
     at_response_t resp = RT_NULL;
     int i, qi_arg[3];
     char parsed_data[20];
     rt_err_t result = RT_EOK;
 
+//======================================================================================	
+	//by yangwensen@20191112
+    rt_memset(parsed_data, 0, sizeof(parsed_data));
+    ec20_power_on();
+    LOG_D("[Y]EC20 module powered on,now waiting for RDY...");
+    rt_thread_mdelay(4000);
+//======================================================================================	
     resp = at_create_resp(128, 0, rt_tick_from_millisecond(300));
     if (!resp)
     {
@@ -1075,20 +1118,6 @@ static void ec20_init_thread_entry(void *parameter)
         goto __exit;
     }
     LOG_D("Start initializing the EC20 module");
-//======================================================================================	
-	//by yangwensen@20191111
-    rt_pin_mode(GSM_POWER_PIN, PIN_MODE_OUTPUT);
-    rt_pin_mode(GSM_POWERKEY_PIN, PIN_MODE_OUTPUT);
-	//by yangwensen@20191111
-	rt_pin_write(GSM_POWER_PIN, PIN_HIGH);
-    rt_thread_mdelay(50);
-	rt_pin_write(GSM_POWERKEY_PIN, PIN_HIGH);
-    rt_thread_mdelay(550);
-	rt_pin_write(GSM_POWERKEY_PIN, PIN_LOW);
-    LOG_D("[Y]EC20 module powered on,now waiting for RDY...");
-	
-    rt_thread_mdelay(5000);		//µÈRDY
-//======================================================================================	
 	
     /* wait EC20 startup finish, Send AT every 500ms, if receive OK, SYNC success*/
     if (at_client_wait_connect(EC20_WAIT_CONNECT_TIME))
@@ -1254,6 +1283,7 @@ __exit:
     else
     {
         LOG_E("AT network initialize failed (%d)!", result);
+		ec20_power_off();
     }
 
 }
@@ -1723,6 +1753,9 @@ static int at_socket_device_init(void)
     }
 
     /* initialize EC20 network */
+    rt_pin_mode(GSM_POWER_PIN, PIN_MODE_OUTPUT);
+    rt_pin_mode(AT_DEVICE_POWER_PIN, PIN_MODE_OUTPUT);
+//    rt_pin_mode(AT_DEVICE_STATUS_PIN, PIN_MODE_INPUT);
     ec20_net_init();
 
     /* set EC20 AT Socket options */
