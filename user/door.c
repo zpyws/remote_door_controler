@@ -41,11 +41,24 @@ extern void door_init(void)
 	rt_memcpy(door_info.auth_code, "Kijni1nld", sizeof(door_info.auth_code)-1);
 }
 //************************************************************************************************************
+//by yangwensen@20191112
 extern int8_t door_register(void)
 {
 	uint8_t len;
 	
 	len = rt_sprintf(txbuff, "R:%04X:%s:%s:%s:%s\n", door_info.session_id, door_info.IMEI, door_info.ICCID, door_info.auth_code, "898604241118C0010270");
+	DOOR_WRITE(txbuff, len);
+	
+	return 0;
+}
+//************************************************************************************************************
+//by yangwensen@20191112
+extern int8_t door_heart_beat(void)
+{
+	uint8_t len;
+	int8_t error = 0;
+	
+	len = rt_sprintf(txbuff, "H:ffff:%d\n", error);
 	DOOR_WRITE(txbuff, len);
 	
 	return 0;
