@@ -1,7 +1,11 @@
 //created by yangwensen@20191112
+#define DBG_LVL				DBG_INFO
+#define DBG_TAG				"door"
+//************************************************************************************************************
 #include <rtthread.h>
 #include <at.h>
 #include <rtdbg.h>
+#include <sys/socket.h>
 //************************************************************************************************************
 //by yangwensen@20191112
 typedef struct
@@ -35,6 +39,9 @@ static struct at_urc door_urc_table[] =
 };
 //************************************************************************************************************
 #define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
+
+#define SERVER_IP			"119.3.128.217"
+#define SERVER_PORT			8091
 //************************************************************************************************************
 //by yangwensen@20191112
 extern void memdump(uint8_t *buff, uint16_t len)
@@ -70,7 +77,7 @@ extern void door_init(void)
 }
 //************************************************************************************************************
 //by yangwensen@20191112
-extern int8_t door_register(void)
+extern int8_t door_register(int sock)
 {
 	uint8_t len;
 	
@@ -102,12 +109,50 @@ int door_client_obj_init(void)
 }
 //************************************************************************************************************
 //by yangwensen@20191113
+static int tcp_client(char *server_ip, int server_port)
+{
+	int sock = -1;
+	struct sockaddr_in server_addr;
+	
+	sock = socket(AF_AT, SOCK_STREAM, 0);
+	if(sock < 0)
+	{
+		LOG_E("[Y]Create socket error");
+		goto __TCP_CLIENT_EXIT;
+	}
+	LOG_I("[Y]Socket allocated ok\n");
+	
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(server_port);
+	server_addr.sin_addr.s_addr = inet_addr(server_ip);
+	rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
+
+    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+    {
+        LOG_E("[Y]Connect to dingdong home server fail!");
+        goto __TCP_CLIENT_EXIT;
+    }
+	LOG_I("[Y]Connect to dingdong home server OK!");
+//=====================================================================================	
+//=====================================================================================	
+__TCP_CLIENT_EXIT:	
+	if(sock >=0)
+	{
+		closesocket(sock);
+		sock = -1;
+	}
+	return -1;
+}
+//************************************************************************************************************
+//by yangwensen@20191113
 static void task_door_server(void* parameter)
 {
+	tcp_client(SERVER_IP, SERVER_PORT);
+	
 	while(1)
 	{
         rt_thread_mdelay(1000);	
-		rt_kprintf("task_door_server\r\n");
+//		rt_kprintf("task_door_server\r\n");
 	}
 }
 //************************************************************************************************************
