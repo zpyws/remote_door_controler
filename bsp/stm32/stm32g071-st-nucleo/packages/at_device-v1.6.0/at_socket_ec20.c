@@ -31,6 +31,7 @@
 
 #include <at.h>
 #include <at_socket.h>
+#include "door.h"				//by yangwensen@20191113
 
 #if !defined(RT_USING_NETDEV)
 #error "This RT-Thread version is older, please check and updata laster RT-Thread!"
@@ -1175,6 +1176,14 @@ static void ec20_init_thread_entry(void *parameter)
 
     /* Use AT+QCCID to query ICCID number of SIM card */
     AT_SEND_CMD(resp, 0, 300, "AT+QCCID");
+	if (at_resp_parse_line_args_by_kw(resp, "+QCCID:", "+QCCID: %s", door_info.ICCID) <= 0)	//by yangwensen@20191113
+	{
+		LOG_E("Prase \"AT+QCCID\" commands resposne data error!");
+		result = -RT_ERROR;
+		goto __exit;
+	}
+	LOG_D("[Y]SIM ICCID: %s", door_info.ICCID);
+	
     /* check signal strength */
     for (i = 0; i < CSQ_RETRY; i++)
     {
@@ -1375,6 +1384,7 @@ static int ec20_netdev_set_info(struct netdev *netdev)
             goto __exit;
         }
 
+		rt_memcpy(door_info.IMEI, iemi, sizeof(door_info.IMEI)-1);		//by yangwensen@20191113
         LOG_D("EC20 IEMI number: %s", iemi);
 
         netdev->hwaddr_len = EC20_NETDEV_HWADDR_LEN;
