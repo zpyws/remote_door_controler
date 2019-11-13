@@ -30,8 +30,8 @@ static struct at_urc door_urc_table[] =
 	{"U:",		"\n", 	urc_func},
 };
 //************************************************************************************************************
-#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
-//#define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)//memdump((uint8_t *)(a),b)
+//#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
+#define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)
 
 #define SERVER_IP			"119.3.128.217"
 #define SERVER_PORT			8091
@@ -62,6 +62,8 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 	int ret;
 	
 	ret = send(sock, buff, len, 0);
+	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
+	else LOG_I("[Y]TCP send %d bytes\r\n", len);
 	return ret;
 }
 //************************************************************************************************************
@@ -78,7 +80,6 @@ extern void door_init(void)
 	LOG_I("[Y]ICCID: %s", door_info.ICCID);
 	memdump(door_info.ICCID, sizeof(door_info.ICCID));
 	
-	door_register(0);
 //	door_client_obj_init();
 	create_door_server_process();
 }
@@ -87,9 +88,11 @@ extern void door_init(void)
 extern int8_t door_register(int sock)
 {
 	uint8_t len;
+	int res;
 	
 	len = rt_sprintf(txbuff, "R:%04X:%s:%s:%s:%s\n", door_info.session_id, door_info.IMEI, door_info.ICCID, door_info.auth_code, "898604241118C0010270");
-	DOOR_WRITE(txbuff, len);
+	res = DOOR_WRITE(txbuff, len);
+	if(res < 0)return -1;
 	
 	return 0;
 }
@@ -141,7 +144,8 @@ static int tcp_client(char *server_ip, int server_port)
     }
 	LOG_I("[Y]Connect to dingdong home server OK!");
 //=====================================================================================	
-//	door_register(sock);
+	door_register(sock);
+	rt_thread_mdelay(2000);	
 //=====================================================================================	
 __TCP_CLIENT_EXIT:	
 	if(sock >=0)
@@ -169,7 +173,7 @@ static void create_door_server_process(void)
 {
     rt_thread_t tid;
 	
-    tid = rt_thread_create("ec20_net_init", task_door_server, RT_NULL, 512, 25, 20);
+    tid = rt_thread_create("tcp_client", task_door_server, RT_NULL, 1024, 25, 20);
     if (tid)
     {
         rt_thread_startup(tid);
