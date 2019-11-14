@@ -7,6 +7,8 @@
 #include <rtdbg.h>
 #include <sys/socket.h>
 #include "door.h"
+#include <sys/time.h>
+#include <string.h>
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -118,8 +120,10 @@ static int tcp_client(char *server_ip, int server_port)
 {
 	int sock = -1;
 	struct sockaddr_in server_addr;
-	char *recv_data;
-	int ret;
+	char *recv_data = RT_NULL;
+	int ret,len;
+//	struct timeval timeout;
+//	fd_set readset;
 	
     recv_data = rt_malloc(BUFSZ);
     if (recv_data == RT_NULL)
@@ -148,17 +152,36 @@ static int tcp_client(char *server_ip, int server_port)
     }
 	LOG_I("[Y]Connect to dingdong home server OK!");
 //=====================================================================================	
-	ret = door_register_str(recv_data);
-	DOOR_WRITE(recv_data, ret);
-	
+	//ÃÅËø×¢²á
+	len = door_register_str(recv_data);
+	ret = send(sock, recv_data, len, 0);
+	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
+	else LOG_I("[Y]TCP send %d bytes\r\n", len);
+#if 0
+	timeout.tv_sec = 3;
+	timeout.tv_usec =  0;
+	FD_ZERO(&readset);
+	FD_SET(sock, &readset);
+#endif
 	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
 	ret = recv(sock, recv_data, BUFSZ - 1, 0);
 	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
+	if(ret<=0)
+	{
+		LOG_E("[Y]recv error=%d\r\n", ret);
+        goto __TCP_CLIENT_EXIT;
+	}
 	memdump((uint8_t *)recv_data, ret);
 	
 	rt_thread_mdelay(2000);	
 //=====================================================================================	
 __TCP_CLIENT_EXIT:	
+    if (recv_data)
+    {
+        rt_free(recv_data);
+        recv_data = RT_NULL;
+    }
+	
 	if(sock >=0)
 	{
 		closesocket(sock);
