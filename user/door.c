@@ -18,8 +18,6 @@ static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id);
 //************************************************************************************************************
 #define BUFSZ   1024
 
-static char txbuff[80];
-
 door_info_t door_info;
 
 //by yangwensen@20191112
@@ -96,15 +94,32 @@ static uint8_t door_register_str(char *str)
 	return rt_sprintf(str, "R:%04X:%s:%s:%s:%s\n", door_info.session_id, door_info.IMEI, door_info.ICCID, door_info.auth_code, "898604241118C0010270");
 }
 //************************************************************************************************************
-//by yangwensen@20191112
-extern int8_t door_heart_beat(int sock)
+//by yangwensen@20191114
+extern int8_t door_heart_beat(int sock, char *str)
 {
 	uint8_t len;
 	int8_t error = 0;
+	int ret;
 	
-	len = rt_sprintf(txbuff, "H:ffff:%d\n", error);
-	DOOR_WRITE(txbuff, len);
+	len = rt_sprintf(str, "H:%s:%d\n", door_info.IMEI, error);
+	ret = tcp_write(sock, (uint8_t *)str, len);
 	
+	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
+	ret = recv(sock, str, BUFSZ - 1, 0);
+	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
+	if(ret<=0)
+	{
+		LOG_E("[Y]recv error=%d\r\n", ret);
+        return -1;
+	}
+
+	if( check_response(str, ret, door_info.session_id) != 0)
+	{
+		LOG_E("[Y]check server response data error\r\n");
+        return -2;
+	}
+	LOG_D("[Y]get heart beat pack response!\r\n");
+
 	return 0;
 }
 //************************************************************************************************************
@@ -125,7 +140,6 @@ static int tcp_client(char *server_ip, int server_port)
 	char *recv_data = RT_NULL;
 	int ret,len;
 	struct timeval timeout;
-//	fd_set readset;
 	
     recv_data = rt_malloc(BUFSZ);
     if (recv_data == RT_NULL)
@@ -186,6 +200,7 @@ static int tcp_client(char *server_ip, int server_port)
 		if(ret==-1 && errno==EAGAIN)
 		{
 			LOG_W("[Y]recv timeout,send heart beat pack\r\n");
+			door_heart_beat(sock, recv_data);
 			continue;
 		}
 		
@@ -235,8 +250,8 @@ static void create_door_server_process(void)
 //by yangwensen@20191114
 static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id)
 {
-	const char STR_OK[] = "OK:";
-	const char STR_ERR[] = "ERR:";
+	const char STR_OK[] = "OK";
+	const char STR_ERR[] = "ERR";
 	
 	str[len] = 0;
 	LOG_D("[Y][server]%s\n", str);
