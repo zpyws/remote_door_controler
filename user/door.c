@@ -9,6 +9,7 @@
 #include "door.h"
 #include <sys/time.h>
 #include <string.h>
+#include <stdio.h>
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -19,13 +20,14 @@ static int8_t recv_data_resolve(char *buff, uint32_t len);
 
 //cmd
 static void cmd_query_status(const char *data, rt_size_t size);
-static void cmd_open_door(const char *data, rt_size_t size);
+static void cmd_open_door(char *data, rt_size_t size);
 static void cmd_update_soundcode(const char *data, rt_size_t size);
 static void cmd_volume(const char *data, rt_size_t size);
 //************************************************************************************************************
 #define BUFSZ   1024
 
 door_info_t door_info;
+int socket_tcp = -1;
 
 //by yangwensen@20191112
 static const struct at_urc door_urc_table[] = 
@@ -33,7 +35,7 @@ static const struct at_urc door_urc_table[] =
 	{"OK:",		"\n", 	urc_func},
 	{"ERR:",	"\n", 	urc_func},
 	{"Q:",		"\n", 	cmd_query_status},
-	{"O:",		"\n", 	cmd_open_door},
+	{"O:",		"\n", 	(void (*)(const char *data, rt_size_t size))cmd_open_door},
 	{"S:",		"\n", 	cmd_update_soundcode},
 	{"V:",		"\n", 	cmd_volume},
 };
@@ -142,7 +144,6 @@ int door_client_obj_init(void)
 //by yangwensen@20191113
 static int tcp_client(char *server_ip, int server_port)
 {
-	int sock = -1;
 	struct sockaddr_in server_addr;
 	char *recv_data = RT_NULL;
 	int ret,len;
@@ -155,8 +156,8 @@ static int tcp_client(char *server_ip, int server_port)
         return -1;
     }
 	
-	sock = socket(AF_AT, SOCK_STREAM, 0);
-	if(sock < 0)
+	socket_tcp = socket(AF_AT, SOCK_STREAM, 0);
+	if(socket_tcp < 0)
 	{
 		LOG_E("[Y]Create socket error");
 		goto __TCP_CLIENT_EXIT;
@@ -168,7 +169,7 @@ static int tcp_client(char *server_ip, int server_port)
 	server_addr.sin_addr.s_addr = inet_addr(server_ip);
 	rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
 
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+    if (connect(socket_tcp, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
     {
         LOG_E("[Y]Connect to dingdong home server fail!");
         goto __TCP_CLIENT_EXIT;
@@ -177,10 +178,10 @@ static int tcp_client(char *server_ip, int server_port)
 //=====================================================================================	
 	//ÃÅËø×¢²á
 	len = door_register_str(recv_data);
-	ret = tcp_write(sock, (uint8_t *)recv_data, len);
+	ret = tcp_write(socket_tcp, (uint8_t *)recv_data, len);
 
 	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
-	ret = recv(sock, recv_data, BUFSZ - 1, 0);
+	ret = recv(socket_tcp, recv_data, BUFSZ - 1, 0);
 	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
 	if(ret<=0)
 	{
@@ -197,15 +198,15 @@ static int tcp_client(char *server_ip, int server_port)
 //=====================================================================================	
 	timeout.tv_sec = 10;
 	timeout.tv_usec =  0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+	setsockopt(socket_tcp, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 	while(1)
 	{
-		ret = recv(sock, recv_data, BUFSZ - 1, 0);
+		ret = recv(socket_tcp, recv_data, BUFSZ - 1, 0);
 		
 		if(ret==-1 && errno==EAGAIN)
 		{
 			LOG_W("[Y]recv timeout,send heart beat pack\r\n");
-			door_heart_beat(sock, recv_data);
+			door_heart_beat(socket_tcp, recv_data);
 			continue;
 		}
 		
@@ -219,10 +220,10 @@ __TCP_CLIENT_EXIT:
         recv_data = RT_NULL;
     }
 	
-	if(sock >=0)
+	if(socket_tcp >=0)
 	{
-		closesocket(sock);
-		sock = -1;
+		closesocket(socket_tcp);
+		socket_tcp = -1;
 	}
 	return -1;
 }
@@ -281,6 +282,9 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
 
 	memdump((uint8_t *)buffer, buf_sz);
 	
+	buffer[buf_sz] = 0;
+	LOG_I("%s\r\n", buffer);
+	
     for (i = 0; i < ARRAY_SIZE(door_urc_table); i++)
     {
         prefix_len = strlen(door_urc_table[i].cmd_prefix);
@@ -297,16 +301,54 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
         }
     }
 	
-//	if( i < ARRAY_SIZE(door_urc_table) )
+	if( i >= ARRAY_SIZE(door_urc_table) )
+		return -1;
+	
 	LOG_I("[Y]cmd[%d] found\r\n", i);
+	
+	if(door_urc_table[i].func != RT_NULL)
+		return -2;
+	
+	door_urc_table[i].func( &buffer[prefix_len], buf_sz-(prefix_len+suffix_len) );
 		
 	return 0;
 }
 //************************************************************************************************************
 //by yangwensen@20191114
-static void cmd_open_door(const char *data, rt_size_t size)
+int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, ...)
 {
+    va_list args;
+    int resp_args_num = 0;
+
+    RT_ASSERT(resp_expr);
+
+    va_start(args, resp_expr);
+
+    resp_args_num = vsscanf(resp_line_buf, resp_expr, args);
+
+    va_end(args);
+
+    return resp_args_num;
+}
+
+//************************************************************************************************************
+//by yangwensen@20191114
+static void cmd_open_door(char *data, rt_size_t size)
+{
+	uint16_t id;
+	
 	LOG_D("cmd_open_door[%d]\r\n", size);
+	
+	if (door_resp_parse_line_args(data, "%x", id) <= 0)
+	{
+		LOG_E("Prase cmd_open_door resposne data error!");
+		size = rt_sprintf(data, "ERROR:%04X\n", 0xffff);
+		tcp_write(socket_tcp, (uint8_t *)data, size);
+		return;
+	}
+	
+	size = rt_sprintf(data, "OK:%04X\n", id);
+	tcp_write(socket_tcp, (uint8_t *)data, size);
 }
 //************************************************************************************************************
 //by yangwensen@20191114
