@@ -124,7 +124,7 @@ static int tcp_client(char *server_ip, int server_port)
 	struct sockaddr_in server_addr;
 	char *recv_data = RT_NULL;
 	int ret,len;
-//	struct timeval timeout;
+	struct timeval timeout;
 //	fd_set readset;
 	
     recv_data = rt_malloc(BUFSZ);
@@ -173,8 +173,25 @@ static int tcp_client(char *server_ip, int server_port)
         goto __TCP_CLIENT_EXIT;
 	}
 	LOG_D("[Y]door access controller registered!\r\n");
-	
-	rt_thread_mdelay(2000);	
+//=====================================================================================	
+	timeout.tv_sec = 10;
+	timeout.tv_usec =  0;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+	while(1)
+	{
+		LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
+		ret = recv(sock, recv_data, BUFSZ - 1, 0);
+		LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
+		
+		if(ret==-1 && errno==EAGAIN)
+		{
+			LOG_W("[Y]recv timeout,send heart beat pack\r\n");
+			continue;
+		}
+		
+		memdump((uint8_t *)recv_data, ret);
+		rt_thread_mdelay(2000);	
+	}
 //=====================================================================================	
 __TCP_CLIENT_EXIT:	
     if (recv_data)
