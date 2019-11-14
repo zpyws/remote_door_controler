@@ -15,22 +15,27 @@ static void create_door_server_process(void);
 int door_client_obj_init(void);
 extern int8_t door_register(int sock);
 static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id);
+static int8_t recv_data_resolve(char *buff, uint32_t len);
+
+//cmd
+static void cmd_query_status(const char *data, rt_size_t size);
+static void cmd_open_door(const char *data, rt_size_t size);
+static void cmd_update_soundcode(const char *data, rt_size_t size);
+static void cmd_volume(const char *data, rt_size_t size);
 //************************************************************************************************************
 #define BUFSZ   1024
 
 door_info_t door_info;
 
 //by yangwensen@20191112
-static struct at_urc door_urc_table[] = 
+static const struct at_urc door_urc_table[] = 
 {
 	{"OK:",		"\n", 	urc_func},
 	{"ERR:",	"\n", 	urc_func},
-	{"O:",		"\n", 	urc_func},
-	{"C:",		"\n", 	urc_func},
-	{"T:",		"\n", 	urc_func},
-	{"IP:",		"\n", 	urc_func},
-	{"S:",		"\n", 	urc_func},
-	{"U:",		"\n", 	urc_func},
+	{"Q:",		"\n", 	cmd_query_status},
+	{"O:",		"\n", 	cmd_open_door},
+	{"S:",		"\n", 	cmd_update_soundcode},
+	{"V:",		"\n", 	cmd_volume},
 };
 //************************************************************************************************************
 //#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
@@ -38,6 +43,8 @@ static struct at_urc door_urc_table[] =
 
 #define SERVER_IP			"119.3.128.217"
 #define SERVER_PORT			8091
+
+#define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 //************************************************************************************************************
 //by yangwensen@20191112
 extern void memdump(uint8_t *buff, uint16_t len)
@@ -186,16 +193,14 @@ static int tcp_client(char *server_ip, int server_port)
 		LOG_E("[Y]check server response data error\r\n");
         goto __TCP_CLIENT_EXIT;
 	}
-	LOG_D("[Y]door access controller registered!\r\n");
+	LOG_I("[Y]door access controller registered!\r\n");
 //=====================================================================================	
 	timeout.tv_sec = 10;
 	timeout.tv_usec =  0;
 	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 	while(1)
 	{
-		LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
 		ret = recv(sock, recv_data, BUFSZ - 1, 0);
-		LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
 		
 		if(ret==-1 && errno==EAGAIN)
 		{
@@ -204,8 +209,7 @@ static int tcp_client(char *server_ip, int server_port)
 			continue;
 		}
 		
-		memdump((uint8_t *)recv_data, ret);
-		rt_thread_mdelay(2000);	
+		recv_data_resolve(recv_data, ret);
 	}
 //=====================================================================================	
 __TCP_CLIENT_EXIT:	
@@ -268,5 +272,58 @@ static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id)
 	}
 	
 	return -2;
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
+{
+    rt_size_t i, prefix_len, suffix_len;
+
+	memdump((uint8_t *)buffer, buf_sz);
+	
+    for (i = 0; i < ARRAY_SIZE(door_urc_table); i++)
+    {
+        prefix_len = strlen(door_urc_table[i].cmd_prefix);
+        suffix_len = strlen(door_urc_table[i].cmd_suffix);
+        if (buf_sz < prefix_len + suffix_len)
+        {
+            continue;
+        }
+		
+        if ((prefix_len ? !strncmp(buffer, door_urc_table[i].cmd_prefix, prefix_len) : 1)
+                && (suffix_len ? !strncmp(buffer + buf_sz - suffix_len, door_urc_table[i].cmd_suffix, suffix_len) : 1))
+        {
+            break;
+        }
+    }
+	
+//	if( i < ARRAY_SIZE(door_urc_table) )
+	LOG_I("[Y]cmd[%d] found\r\n", i);
+		
+	return 0;
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static void cmd_open_door(const char *data, rt_size_t size)
+{
+	LOG_D("cmd_open_door[%d]\r\n", size);
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static void cmd_query_status(const char *data, rt_size_t size)
+{
+	LOG_D("cmd_query_status[%d]\r\n", size);
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static void cmd_update_soundcode(const char *data, rt_size_t size)
+{
+	LOG_D("cmd_update_soundcode[%d]\r\n", size);
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static void cmd_volume(const char *data, rt_size_t size)
+{
+	LOG_D("cmd_volume[%d]\r\n", size);
 }
 //************************************************************************************************************
