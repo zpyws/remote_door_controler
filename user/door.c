@@ -14,6 +14,7 @@ static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
 int door_client_obj_init(void);
 extern int8_t door_register(int sock);
+static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id);
 //************************************************************************************************************
 #define BUFSZ   1024
 
@@ -68,6 +69,7 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 	ret = send(sock, buff, len, 0);
 	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
 	else LOG_I("[Y]TCP send %d bytes\r\n", len);
+	
 	return ret;
 }
 //************************************************************************************************************
@@ -154,15 +156,8 @@ static int tcp_client(char *server_ip, int server_port)
 //=====================================================================================	
 	//ÃÅËø×¢²á
 	len = door_register_str(recv_data);
-	ret = send(sock, recv_data, len, 0);
-	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
-	else LOG_I("[Y]TCP send %d bytes\r\n", len);
-#if 0
-	timeout.tv_sec = 3;
-	timeout.tv_usec =  0;
-	FD_ZERO(&readset);
-	FD_SET(sock, &readset);
-#endif
+	ret = tcp_write(sock, (uint8_t *)recv_data, len);
+
 	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
 	ret = recv(sock, recv_data, BUFSZ - 1, 0);
 	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
@@ -171,7 +166,13 @@ static int tcp_client(char *server_ip, int server_port)
 		LOG_E("[Y]recv error=%d\r\n", ret);
         goto __TCP_CLIENT_EXIT;
 	}
-	memdump((uint8_t *)recv_data, ret);
+	
+	if( check_response(recv_data, ret, door_info.session_id) != 0)
+	{
+		LOG_E("[Y]check server response data error\r\n");
+        goto __TCP_CLIENT_EXIT;
+	}
+	LOG_D("[Y]door access controller registered!\r\n");
 	
 	rt_thread_mdelay(2000);	
 //=====================================================================================	
@@ -212,5 +213,28 @@ static void create_door_server_process(void)
     {
         rt_thread_startup(tid);
     }
+}
+//************************************************************************************************************
+//by yangwensen@20191114
+static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id)
+{
+	const char STR_OK[] = "OK:";
+	const char STR_ERR[] = "ERR:";
+	
+	str[len] = 0;
+	LOG_D("[Y][server]%s\n", str);
+	
+//	if(str[len-1]!='\n')return -1;
+	
+	if( rt_memcmp(str, STR_OK, sizeof(STR_OK)-1) == 0 )
+	{
+		return 0;
+	}
+	else if( rt_memcmp(str, STR_ERR, sizeof(STR_ERR)-1) == 0 )
+	{
+		return 1;
+	}
+	
+	return -2;
 }
 //************************************************************************************************************
