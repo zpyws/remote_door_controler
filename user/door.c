@@ -20,7 +20,7 @@ static int8_t recv_data_resolve(char *buff, uint32_t len);
 
 //cmd
 static void cmd_query_status(const char *data, rt_size_t size);
-static void cmd_open_door(char *data, rt_size_t size);
+static void cmd_open_door(const char *data, rt_size_t size);
 static void cmd_update_soundcode(const char *data, rt_size_t size);
 static void cmd_volume(const char *data, rt_size_t size);
 //************************************************************************************************************
@@ -35,7 +35,7 @@ static const struct at_urc door_urc_table[] =
 	{"OK:",		"\n", 	urc_func},
 	{"ERR:",	"\n", 	urc_func},
 	{"Q:",		"\n", 	cmd_query_status},
-	{"O:",		"\n", 	(void (*)(const char *data, rt_size_t size))cmd_open_door},
+	{"O:",		"", 	cmd_open_door},
 	{"S:",		"\n", 	cmd_update_soundcode},
 	{"V:",		"\n", 	cmd_volume},
 };
@@ -73,6 +73,7 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 {
 	int ret;
 	
+	memdump(buff, len);
 	ret = send(sock, buff, len, 0);
 	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
 	else LOG_I("[Y]TCP send %d bytes\r\n", len);
@@ -306,11 +307,11 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
 	
 	LOG_I("[Y]cmd[%d] found\r\n", i);
 	
-	if(door_urc_table[i].func != RT_NULL)
+	if(door_urc_table[i].func == RT_NULL)
 		return -2;
 	
 	door_urc_table[i].func( &buffer[prefix_len], buf_sz-(prefix_len+suffix_len) );
-		
+
 	return 0;
 }
 //************************************************************************************************************
@@ -333,12 +334,15 @@ int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, 
 
 //************************************************************************************************************
 //by yangwensen@20191114
-static void cmd_open_door(char *data, rt_size_t size)
+static void cmd_open_door(const char *data, rt_size_t size)
 {
 	uint16_t id;
+	char str[16+4+1];
+	uint8_t len;
 	
 	LOG_D("cmd_open_door[%d]\r\n", size);
-	
+	memdump((uint8_t *)data, size);
+#if 0
 	if (door_resp_parse_line_args(data, "%x", id) <= 0)
 	{
 		LOG_E("Prase cmd_open_door resposne data error!");
@@ -346,9 +350,11 @@ static void cmd_open_door(char *data, rt_size_t size)
 		tcp_write(socket_tcp, (uint8_t *)data, size);
 		return;
 	}
+#endif
 	
-	size = rt_sprintf(data, "OK:%04X\n", id);
-	tcp_write(socket_tcp, (uint8_t *)data, size);
+	len = rt_sprintf(str, "OK:");
+	rt_memcpy(&str[len], data, size);
+	tcp_write(socket_tcp, (uint8_t *)str, len+size);
 }
 //************************************************************************************************************
 //by yangwensen@20191114
