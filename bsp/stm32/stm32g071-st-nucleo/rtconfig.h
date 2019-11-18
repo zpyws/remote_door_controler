@@ -58,8 +58,6 @@
 
 #define RT_USING_FINSH
 #define FINSH_THREAD_NAME "tshell"
-#define FINSH_USING_HISTORY
-#define FINSH_HISTORY_LINES 5
 #define FINSH_USING_SYMTAB
 #define FINSH_USING_DESCRIPTION
 #define FINSH_THREAD_PRIORITY 20
@@ -67,6 +65,7 @@
 #define FINSH_CMD_SIZE 80
 #define FINSH_USING_MSH
 #define FINSH_USING_MSH_DEFAULT
+#define FINSH_USING_MSH_ONLY
 #define FINSH_ARG_MAX 10
 
 /* Device virtual file system */
@@ -162,8 +161,8 @@
 #define AT_DEVICE_RECV_BUFF_LEN 512
 #define PKG_USING_AT_DEVICE_V160
 #define PKG_AT_DEVICE_VER_NUM 0x10600
-#define GSM_POWER_PIN 46			//by yangwensen@20191112
-#define AT_DEVICE_POWER_PIN 47		//by yangwensen@20191112
+#define GSM_POWER_PIN 46					//by yangwensen@20191112
+#define AT_DEVICE_POWER_PIN 47				//by yangwensen@20191112
 
 /* IoT Cloud */
 
