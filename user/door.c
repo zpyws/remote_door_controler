@@ -26,6 +26,11 @@ static void cmd_volume(const char *data, rt_size_t size);
 //************************************************************************************************************
 #define BUFSZ   1024
 
+#define SESSION_ID_LEN			4
+#define DEVICE_SN_LEN			15//size(door_info.IMEI)
+#define SOUND_MD5_LEN			32
+#define MAX_SOUND_CLIPS			3
+
 door_info_t door_info;
 int socket_tcp = -1;
 
@@ -35,7 +40,7 @@ static const struct at_urc door_urc_table[] =
 	{"OK:",		"\n", 	urc_func},
 	{"ERR:",	"\n", 	urc_func},
 	{"Q:",		"\n", 	cmd_query_status},
-	{"O:",		"", 	cmd_open_door},
+	{"O:",		"\n", 	cmd_open_door},
 	{"S:",		"\n", 	cmd_update_soundcode},
 	{"V:",		"\n", 	cmd_volume},
 };
@@ -119,7 +124,7 @@ extern int8_t door_heart_beat(int sock, char *str)
 	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
 	if(ret<=0)
 	{
-		LOG_E("[Y]recv error=%d\r\n", ret);
+		LOG_E("[Y]heart beat response recv error=%d\r\n", ret);
         return -1;
 	}
 
@@ -336,7 +341,6 @@ int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, 
 //by yangwensen@20191114
 static void cmd_open_door(const char *data, rt_size_t size)
 {
-	uint16_t id;
 	char str[16+4+1];
 	uint8_t len;
 	
@@ -360,7 +364,36 @@ static void cmd_open_door(const char *data, rt_size_t size)
 //by yangwensen@20191114
 static void cmd_query_status(const char *data, rt_size_t size)
 {
+	#define CMD_QUERY_STATUS_RESPONSE_LEN_MAX	(SESSION_ID_LEN+DEVICE_SN_LEN+(1+SOUND_MD5_LEN+3)*MAX_SOUND_CLIPS)
+
+	char *buf;
+	rt_size_t len;
+	uint8_t signal_strenth;
+	uint8_t i;
+
 	LOG_D("cmd_query_status[%d]\r\n", size);
+
+    buf = rt_malloc(CMD_QUERY_STATUS_RESPONSE_LEN_MAX);
+    if (buf == RT_NULL)
+    {
+        LOG_E("cmd_query_status No memory[%d]\r\n", CMD_QUERY_STATUS_RESPONSE_LEN_MAX);
+        return;
+    }
+//----------------------------------------------------------------------------------------------
+	len = rt_sprintf(buf, "OK:%04X:%s:%d", door_info.session_id, door_info.IMEI, signal_strenth);
+	for(i=0; i<MAX_SOUND_CLIPS; i++)
+	{
+		len += rt_sprintf(buf+len, ":%d:%s:%d", i, "898604241118C0010270", 55+i);	//index,md5,volume
+	}
+	buf[len++] = '\n';
+
+	tcp_write(socket_tcp, (uint8_t *)buf, len);
+//----------------------------------------------------------------------------------------------
+    if (buf)
+    {
+        rt_free(buf);
+        buf = RT_NULL;
+    }
 }
 //************************************************************************************************************
 //by yangwensen@20191114
