@@ -205,6 +205,11 @@ static int tcp_client(char *server_ip, int server_port)
 			door_heart_beat(socket_tcp, recv_data);
 			continue;
 		}
+		else if(ret==0)		//current socket closed by remote
+		{
+			LOG_E("[Y]socket closed by remote host\r\n");
+			break;
+		}
 		
 		recv_data_resolve(recv_data, ret);
 	}
@@ -232,6 +237,7 @@ static void task_door_server(void* parameter)
 	while(1)
 	{
         rt_thread_mdelay(1000);	
+		LOG_E("[Y]socket closed\r\n");
 	}
 }
 //************************************************************************************************************
