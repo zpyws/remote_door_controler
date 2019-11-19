@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -29,7 +30,7 @@ static void cmd_volume(const char *data, rt_size_t size);
 #define SESSION_ID_LEN			4
 #define DEVICE_SN_LEN			15//size(door_info.IMEI)
 #define SOUND_MD5_LEN			32
-#define MAX_SOUND_CLIPS			3
+#define MAX_SOUND_CLIPS			4
 
 door_info_t door_info;
 int socket_tcp = -1;
@@ -49,7 +50,7 @@ static const struct at_urc door_urc_table[] =
 #define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)
 
 #define SERVER_IP			"119.3.128.217"
-#define SERVER_PORT			8091
+#define SERVER_PORT			8092
 
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 //************************************************************************************************************
@@ -320,6 +321,31 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
 	return 0;
 }
 //************************************************************************************************************
+//by yangwensen@20191118
+const char *resp_get_field(char *resp_buf, rt_size_t len, rt_size_t resp_line)
+{
+    rt_size_t line_num = 0;
+	rt_size_t i;
+
+    RT_ASSERT(resp_buf);
+
+	if(resp_line==0)return resp_buf;
+
+	for(i=0; i<len; i++)
+	{
+		if(*resp_buf == ':')
+		{
+			if(++line_num>=resp_line)
+			{
+				return (resp_buf+1);
+			}
+		}
+		resp_buf++;
+	}
+
+    return RT_NULL;
+}
+//************************************************************************************************************
 //by yangwensen@20191114
 int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, ...)
 {
@@ -357,14 +383,14 @@ static void cmd_open_door(const char *data, rt_size_t size)
 #endif
 	
 	len = rt_sprintf(str, "OK:");
-	rt_memcpy(&str[len], data, size);
-	tcp_write(socket_tcp, (uint8_t *)str, len+size);
+	rt_memcpy(&str[len], data, SESSION_ID_LEN);
+	tcp_write(socket_tcp, (uint8_t *)str, len+SESSION_ID_LEN);
 }
 //************************************************************************************************************
 //by yangwensen@20191114
 static void cmd_query_status(const char *data, rt_size_t size)
 {
-	#define CMD_QUERY_STATUS_RESPONSE_LEN_MAX	(SESSION_ID_LEN+DEVICE_SN_LEN+(1+SOUND_MD5_LEN+3)*MAX_SOUND_CLIPS)
+	#define CMD_QUERY_STATUS_RESPONSE_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+4+(1+SOUND_MD5_LEN+3+3+3)*MAX_SOUND_CLIPS)
 
 	char *buf;
 	rt_size_t len;
@@ -389,11 +415,7 @@ static void cmd_query_status(const char *data, rt_size_t size)
 
 	tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
-    if (buf)
-    {
-        rt_free(buf);
-        buf = RT_NULL;
-    }
+	rt_free(buf);
 }
 //************************************************************************************************************
 //by yangwensen@20191114
@@ -405,6 +427,27 @@ static void cmd_update_soundcode(const char *data, rt_size_t size)
 //by yangwensen@20191114
 static void cmd_volume(const char *data, rt_size_t size)
 {
+	#define CMD_VOLUME_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+2)
+
+	char *buf;
+	rt_size_t len;
+	int volume;
+
 	LOG_D("cmd_volume[%d]\r\n", size);
+
+    buf = rt_malloc(CMD_VOLUME_LEN_MAX);
+    if (buf == RT_NULL)
+    {
+        LOG_E("cmd_volume No memory[%d]\r\n", CMD_VOLUME_LEN_MAX);
+        return;
+    }
+//----------------------------------------------------------------------------------------------
+	volume = atoi( resp_get_field((char *)data, size, 1) );
+	LOG_I("cmd_volume[%d]\r\n", volume);
+	len = rt_sprintf(buf, "OK:%04X:%s\n", door_info.session_id, door_info.IMEI);
+
+	tcp_write(socket_tcp, (uint8_t *)buf, len);
+//----------------------------------------------------------------------------------------------
+	rt_free(buf);
 }
 //************************************************************************************************************
