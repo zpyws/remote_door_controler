@@ -50,7 +50,7 @@ static const struct at_urc door_urc_table[] =
 #define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)
 
 #define SERVER_IP			"119.3.128.217"
-#define SERVER_PORT			8092
+#define SERVER_PORT			8090
 
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 //************************************************************************************************************
@@ -120,9 +120,7 @@ extern int8_t door_heart_beat(int sock, char *str)
 	len = rt_sprintf(str, "H:%s:%d\n", door_info.IMEI, error);
 	ret = tcp_write(sock, (uint8_t *)str, len);
 	
-	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
 	ret = recv(sock, str, BUFSZ - 1, 0);
-	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
 	if(ret<=0)
 	{
 		LOG_E("[Y]heart beat response recv error=%d\r\n", ret);
@@ -134,18 +132,9 @@ extern int8_t door_heart_beat(int sock, char *str)
 		LOG_E("[Y]check server response data error\r\n");
         return -2;
 	}
-	LOG_D("[Y]get heart beat pack response!\r\n");
+	LOG_I("[Y]get heart beat pack response ok!\r\n");
 
 	return 0;
-}
-//************************************************************************************************************
-//by yangwensen@20191112
-int door_client_obj_init(void)
-{
-	at_client_init("ec20", 128);
-	at_set_urc_table(door_urc_table, sizeof(door_urc_table) / sizeof(door_urc_table[0]));
-	
-	return RT_EOK;
 }
 //************************************************************************************************************
 //by yangwensen@20191113
@@ -159,7 +148,7 @@ static int tcp_client(char *server_ip, int server_port)
     recv_data = rt_malloc(BUFSZ);
     if (recv_data == RT_NULL)
     {
-        LOG_E("No memory");
+        LOG_E("[Y]tcp_client No memory[%d]\r\n", BUFSZ);
         return -1;
     }
 	
@@ -243,7 +232,6 @@ static void task_door_server(void* parameter)
 	while(1)
 	{
         rt_thread_mdelay(1000);	
-//		rt_kprintf("task_door_server\r\n");
 	}
 }
 //************************************************************************************************************
@@ -372,15 +360,6 @@ static void cmd_open_door(const char *data, rt_size_t size)
 	
 	LOG_D("cmd_open_door[%d]\r\n", size);
 	memdump((uint8_t *)data, size);
-#if 0
-	if (door_resp_parse_line_args(data, "%x", id) <= 0)
-	{
-		LOG_E("Prase cmd_open_door resposne data error!");
-		size = rt_sprintf(data, "ERROR:%04X\n", 0xffff);
-		tcp_write(socket_tcp, (uint8_t *)data, size);
-		return;
-	}
-#endif
 	
 	len = rt_sprintf(str, "OK:");
 	rt_memcpy(&str[len], data, SESSION_ID_LEN);
