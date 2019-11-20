@@ -24,6 +24,7 @@ static void cmd_query_status(const char *data, rt_size_t size);
 static void cmd_open_door(const char *data, rt_size_t size);
 static void cmd_update_soundcode(const char *data, rt_size_t size);
 static void cmd_volume(const char *data, rt_size_t size);
+static void cmd_firmware_update(const char *data, rt_size_t size);
 //************************************************************************************************************
 #define BUFSZ   1024
 
@@ -31,6 +32,8 @@ static void cmd_volume(const char *data, rt_size_t size);
 #define DEVICE_SN_LEN			15//size(door_info.IMEI)
 #define SOUND_MD5_LEN			32
 #define MAX_SOUND_CLIPS			4
+
+#define FIRMWARE_PACK_SIZE		512
 
 door_info_t door_info;
 int socket_tcp = -1;
@@ -44,9 +47,16 @@ static const struct at_urc door_urc_table[] =
 	{"O:",		"\n", 	cmd_open_door},
 	{"S:",		"\n", 	cmd_update_soundcode},
 	{"V:",		"\n", 	cmd_volume},
+	{"U:",		"\n", 	cmd_firmware_update},
 };
 
 static const char FW_VERSION[] = "V1.0.0";
+
+struct
+{
+	uint32_t size;
+	uint32_t checksum;
+}firmware_info;
 //************************************************************************************************************
 //#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
 #define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)
@@ -438,6 +448,111 @@ static void cmd_volume(const char *data, rt_size_t size)
 
 	tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
+	rt_free(buf);
+}
+//************************************************************************************************************
+//by yangwensen@20191120
+static uint32_t calc_checksum(char *buff, uint32_t len)
+{
+	uint32_t sum = 0;
+
+	while(len--)
+	{
+		sum += *buff++;
+	}
+	return sum;
+}
+//************************************************************************************************************
+//by yangwensen@20191120
+static void cmd_firmware_update(const char *data, rt_size_t size)
+{
+	#define FIRMWARE_PACK_SHELL_SIZE		(3+SESSION_ID_LEN+DEVICE_SN_LEN+8+8+7)	//协议开销
+	#define FIRMWARE_PACK_TOTAL_SIZE		(FIRMWARE_PACK_SHELL_SIZE+FIRMWARE_PACK_SIZE)
+
+	char *buf;
+	uint32_t len;
+	char session[SESSION_ID_LEN+1];
+	uint32_t offset = 0;
+	uint32_t packs;
+	uint32_t i;
+	int ret;
+	uint32_t sum = 0;
+
+	LOG_D("cmd_firmware_update[%d]\r\n", size);
+
+    buf = rt_malloc(FIRMWARE_PACK_TOTAL_SIZE);
+    if (buf == RT_NULL)
+    {
+        LOG_E("cmd_firmware_update No memory[%d]\r\n", FIRMWARE_PACK_TOTAL_SIZE);
+        return;
+    }
+
+	rt_memcpy(session, data, SESSION_ID_LEN);
+	session[SESSION_ID_LEN] = 0;
+
+	firmware_info.checksum = atoi( resp_get_field((char *)data, size, 2) );
+	firmware_info.size = atoi( resp_get_field((char *)data, size, 3) );
+	LOG_I("DFU[%s][sum=0x%08X][size=0x%08X]\r\n", resp_get_field((char *)data, size, 1), firmware_info.checksum, firmware_info.size );
+
+	packs = firmware_info.size / FIRMWARE_PACK_SIZE;
+
+	for(i=0; i<packs; i++)
+	{
+		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d\r\n", i+1, packs, ret);
+		len = rt_sprintf(buf, "U:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
+cmd_firmware_update_1:
+		tcp_write(socket_tcp, (uint8_t *)buf, len);
+//----------------------------------------------------------------------------------------------
+		ret = recv(socket_tcp, buf, FIRMWARE_PACK_TOTAL_SIZE-1, 0);
+		if(ret==-1 && errno==EAGAIN)
+		{
+			LOG_E("[Y]firmware recv timeout\r\n");
+			ret = -1;
+			break;
+		}
+		else if(ret==0)		//current socket closed by remote
+		{
+			socket_tcp = -1;
+			ret = -2;
+			LOG_E("[Y]socket closed by remote host\r\n");
+			goto cmd_firmware_update_0;
+		}
+//----------------------------------------------------------------------------------------------
+		LOG_I("[Y]Firmware Pack %d of %d, size=%d\r\n", i, packs, ret);
+		offset += ret;
+		sum += calc_checksum(buf, ret);
+
+		memdump((uint8_t *)buf, ret);
+	}
+//----------------------------------------------------------------------------------------------
+	if(i<packs)							//recieve timeout
+	{
+cmd_firmware_update_2:
+		len = rt_sprintf(buf, "ERR:%s\n", session);
+		tcp_write(socket_tcp, (uint8_t *)buf, len);
+		rt_free(buf);
+		return;
+	}
+//----------------------------------------------------------------------------------------------
+	if(offset < firmware_info.size)		//do we have the last packet?
+	{
+		len = rt_sprintf(buf, "U:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, firmware_info.size % FIRMWARE_PACK_SIZE);
+		LOG_D("[Y]Request Last Firmware Pack, size=%d\r\n", firmware_info.size % FIRMWARE_PACK_SIZE);
+		goto cmd_firmware_update_1;
+	}
+//----------------------------------------------------------------------------------------------
+	if(sum!=firmware_info.checksum)
+	{
+		LOG_E("[Y]Firmware Download Successful but checksum error\r\n");
+		goto cmd_firmware_update_2;
+	}
+//----------------------------------------------------------------------------------------------
+	//firmware download successfully
+	LOG_I("[Y]Firmware Download Successful,total size %d bytes\r\n", firmware_info.size);
+	len = rt_sprintf(buf, "OK:%s:%s:%s\n", session, door_info.IMEI, FW_VERSION);
+	tcp_write(socket_tcp, (uint8_t *)buf, len);
+
+cmd_firmware_update_0:
 	rt_free(buf);
 }
 //************************************************************************************************************
