@@ -45,6 +45,8 @@ static const struct at_urc door_urc_table[] =
 	{"S:",		"\n", 	cmd_update_soundcode},
 	{"V:",		"\n", 	cmd_volume},
 };
+
+static const char FW_VERSION[] = "V1.0.0";
 //************************************************************************************************************
 //#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
 #define DOOR_WRITE(a,b)		tcp_write(sock,(uint8_t *)(a),b)
@@ -117,7 +119,7 @@ extern int8_t door_heart_beat(int sock, char *str)
 	int8_t error = 0;
 	int ret;
 	
-	len = rt_sprintf(str, "H:%s:%d\n", door_info.IMEI, error);
+	len = rt_sprintf(str, "H:%04X:%s:%d\n", 0xffff, door_info.IMEI, error);
 	ret = tcp_write(sock, (uint8_t *)str, len);
 	
 	ret = recv(sock, str, BUFSZ - 1, 0);
@@ -375,7 +377,7 @@ static void cmd_open_door(const char *data, rt_size_t size)
 //by yangwensen@20191114
 static void cmd_query_status(const char *data, rt_size_t size)
 {
-	#define CMD_QUERY_STATUS_RESPONSE_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+4+(1+SOUND_MD5_LEN+3+3+3)*MAX_SOUND_CLIPS)
+	#define CMD_QUERY_STATUS_RESPONSE_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+sizeof(FW_VERSION)+5+(1+SOUND_MD5_LEN+3+3+3)*MAX_SOUND_CLIPS)
 
 	char *buf;
 	rt_size_t len;
@@ -391,7 +393,7 @@ static void cmd_query_status(const char *data, rt_size_t size)
         return;
     }
 //----------------------------------------------------------------------------------------------
-	len = rt_sprintf(buf, "OK:%04X:%s:%d", door_info.session_id, door_info.IMEI, signal_strenth);
+	len = rt_sprintf(buf, "OK:%04X:%s:%d:%s", door_info.session_id, door_info.IMEI, signal_strenth, FW_VERSION);
 	rt_memcpy(&buf[3], data, SESSION_ID_LEN);
 	for(i=0; i<MAX_SOUND_CLIPS; i++)
 	{
@@ -417,7 +419,7 @@ static void cmd_volume(const char *data, rt_size_t size)
 
 	char *buf;
 	rt_size_t len;
-	int volume;
+	int index,volume;
 
 	LOG_D("cmd_volume[%d]\r\n", size);
 
@@ -428,8 +430,9 @@ static void cmd_volume(const char *data, rt_size_t size)
         return;
     }
 //----------------------------------------------------------------------------------------------
-	volume = atoi( resp_get_field((char *)data, size, 1) );
-	LOG_I("cmd_volume[%d]\r\n", volume);
+	index = atoi( resp_get_field((char *)data, size, 1) );
+	volume = atoi( resp_get_field((char *)data, size, 2) );
+	LOG_I("cmd_volume[%d][%d]\r\n", index, volume);
 	len = rt_sprintf(buf, "OK:%04X:%s\n", door_info.session_id, door_info.IMEI);
 	rt_memcpy(&buf[3], data, SESSION_ID_LEN);
 
