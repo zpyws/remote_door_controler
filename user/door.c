@@ -207,6 +207,7 @@ static int tcp_client(char *server_ip, int server_port)
 		}
 		else if(ret==0)		//current socket closed by remote
 		{
+			socket_tcp = -1;
 			LOG_E("[Y]socket closed by remote host\r\n");
 			break;
 		}
@@ -361,16 +362,14 @@ int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, 
 //by yangwensen@20191114
 static void cmd_open_door(const char *data, rt_size_t size)
 {
-	char str[16+4+1];
+	char str[4+SESSION_ID_LEN+1];
 	uint8_t len;
 	
 	LOG_D("cmd_open_door[%d]\r\n", size);
-	memdump((uint8_t *)data, size);
 	
-	len = rt_sprintf(str, "OK:");
-	rt_memcpy(&str[len], data, SESSION_ID_LEN);
-	str[len+SESSION_ID_LEN] = '\n';
-	tcp_write(socket_tcp, (uint8_t *)str, len+SESSION_ID_LEN+1);
+	len = rt_sprintf(str, "OK:%04X\n", 0);
+	rt_memcpy(&str[3], data, SESSION_ID_LEN);
+	tcp_write(socket_tcp, (uint8_t *)str, len);
 }
 //************************************************************************************************************
 //by yangwensen@20191114
@@ -393,6 +392,7 @@ static void cmd_query_status(const char *data, rt_size_t size)
     }
 //----------------------------------------------------------------------------------------------
 	len = rt_sprintf(buf, "OK:%04X:%s:%d", door_info.session_id, door_info.IMEI, signal_strenth);
+	rt_memcpy(&buf[3], data, SESSION_ID_LEN);
 	for(i=0; i<MAX_SOUND_CLIPS; i++)
 	{
 		len += rt_sprintf(buf+len, ":%d:%s:%d", i, "898604241118C0010270", 55+i);	//index,md5,volume
@@ -431,6 +431,7 @@ static void cmd_volume(const char *data, rt_size_t size)
 	volume = atoi( resp_get_field((char *)data, size, 1) );
 	LOG_I("cmd_volume[%d]\r\n", volume);
 	len = rt_sprintf(buf, "OK:%04X:%s\n", door_info.session_id, door_info.IMEI);
+	rt_memcpy(&buf[3], data, SESSION_ID_LEN);
 
 	tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
