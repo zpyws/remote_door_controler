@@ -15,7 +15,7 @@
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
 int door_client_obj_init(void);
-extern int8_t door_register(int sock);
+static int8_t door_register(int sock, char *str);
 static int8_t check_response(char *str, uint8_t len, uint16_t sesson_id);
 static int8_t recv_data_resolve(char *buff, uint32_t len);
 
@@ -122,8 +122,40 @@ static uint8_t door_register_str(char *str)
 	return rt_sprintf(str, "R:%04X:%s:%s:%s:%s\n", door_info.session_id, door_info.IMEI, door_info.ICCID, door_info.auth_code, "898604241118C0010270");
 }
 //************************************************************************************************************
+//by yangwensen@20191121
+static int8_t door_register(int sock, char *str)
+{
+	int len;
+	int ret;
+
+	//ÃÅËø×¢²á
+	len = door_register_str(str);
+
+	ret = tcp_write(socket_tcp, (uint8_t *)str, len);
+	if(ret != len)
+		return -1;
+
+	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
+	ret = recv(socket_tcp, str, BUFSZ - 1, 0);
+	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
+	if(ret<=0)
+	{
+		LOG_E("[Y]recv error=%d\r\n", ret);
+        return -2;
+	}
+	
+	if( check_response(str, ret, door_info.session_id) != 0)
+	{
+		LOG_E("[Y]check server response data error\r\n");
+        return -3;
+	}
+
+	LOG_I("[Y]door access controller registered!\r\n");
+	return 0;
+}
+//************************************************************************************************************
 //by yangwensen@20191114
-extern int8_t door_heart_beat(int sock, char *str)
+static int8_t door_heart_beat(int sock, char *str)
 {
 	uint8_t len;
 	int8_t error = 0;
@@ -154,7 +186,7 @@ static int tcp_client(char *server_ip, int server_port)
 {
 	struct sockaddr_in server_addr;
 	char *recv_data = RT_NULL;
-	int ret,len;
+	int ret;
 	struct timeval timeout;
 	
     recv_data = rt_malloc(BUFSZ);
@@ -185,24 +217,12 @@ static int tcp_client(char *server_ip, int server_port)
 	LOG_I("[Y]Connect to dingdong home server OK!");
 //=====================================================================================	
 	//ÃÅËø×¢²á
-	len = door_register_str(recv_data);
-	ret = tcp_write(socket_tcp, (uint8_t *)recv_data, len);
-
-	LOG_D("[Y]recv start=0x%08X\r\n", rt_tick_get());
-	ret = recv(socket_tcp, recv_data, BUFSZ - 1, 0);
-	LOG_D("[Y]recv end=0x%08X\r\n", rt_tick_get());
-	if(ret<=0)
+	while(1)
 	{
-		LOG_E("[Y]recv error=%d\r\n", ret);
-        goto __TCP_CLIENT_EXIT;
+		if( door_register(socket_tcp, recv_data) == 0)
+			break;
+        rt_thread_mdelay(500);
 	}
-	
-	if( check_response(recv_data, ret, door_info.session_id) != 0)
-	{
-		LOG_E("[Y]check server response data error\r\n");
-        goto __TCP_CLIENT_EXIT;
-	}
-	LOG_I("[Y]door access controller registered!\r\n");
 //=====================================================================================	
 	timeout.tv_sec = 10;
 	timeout.tv_usec =  0;
