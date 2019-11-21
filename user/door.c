@@ -11,6 +11,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "led.h"
+#include "relay.h"
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -102,6 +105,9 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 //by yangwensen@20191112
 extern void door_init(void)
 {
+	rt_hw_led_init();
+	rt_hw_relay_init();
+//=====================================================================================
 //	rt_memset(&door_info, 0, sizeof(door_info));
 	
 //	rt_memcpy(door_info.IMEI, "863412045887166", sizeof(door_info.IMEI)-1);
@@ -213,7 +219,7 @@ static int tcp_client(char *server_ip, int server_port)
         LOG_E("[Y]tcp_client No memory[%d]\r\n", BUFSZ);
         return -1;
     }
-	
+//=====================================================================================	
 	socket_tcp = socket(AF_AT, SOCK_STREAM, 0);
 	if(socket_tcp < 0)
 	{
