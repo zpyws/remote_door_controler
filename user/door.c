@@ -242,6 +242,8 @@ static int tcp_client(char *server_ip, int server_port)
 			break;
         rt_thread_mdelay(500);
 	}
+
+	door_heart_beat(socket_tcp, recv_data);
 //=====================================================================================	
 	timeout.tv_sec = 10;
 	timeout.tv_usec =  0;
