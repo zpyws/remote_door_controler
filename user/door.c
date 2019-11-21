@@ -116,6 +116,25 @@ extern void door_init(void)
 	create_door_server_process();
 }
 //************************************************************************************************************
+//by yangwensen@20191121
+static int8_t connect_server(char *server_ip, int server_port)
+{
+	struct sockaddr_in server_addr;
+
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(server_port);
+	server_addr.sin_addr.s_addr = inet_addr(server_ip);
+	rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
+
+    if (connect(socket_tcp, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+    {
+        LOG_E("[Y]Connect to dingdong home server fail!");
+        return -1;
+    }
+	LOG_I("[Y]Connect to dingdong home server OK!");
+	return 0;
+}
+//************************************************************************************************************
 //by yangwensen@20191112
 static uint8_t door_register_str(char *str)
 {
@@ -184,7 +203,6 @@ static int8_t door_heart_beat(int sock, char *str)
 //by yangwensen@20191113
 static int tcp_client(char *server_ip, int server_port)
 {
-	struct sockaddr_in server_addr;
 	char *recv_data = RT_NULL;
 	int ret;
 	struct timeval timeout;
@@ -203,18 +221,13 @@ static int tcp_client(char *server_ip, int server_port)
 		goto __TCP_CLIENT_EXIT;
 	}
 	LOG_I("[Y]Socket allocated ok\n");
-	
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(server_port);
-	server_addr.sin_addr.s_addr = inet_addr(server_ip);
-	rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
-
-    if (connect(socket_tcp, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
-    {
-        LOG_E("[Y]Connect to dingdong home server fail!");
-        goto __TCP_CLIENT_EXIT;
-    }
-	LOG_I("[Y]Connect to dingdong home server OK!");
+//=====================================================================================	
+	while(1)
+	{
+		if( connect_server(server_ip, server_port) == 0)
+			break;
+        rt_thread_mdelay(500);
+	}
 //=====================================================================================	
 	//ÃÅËø×¢²á
 	while(1)
