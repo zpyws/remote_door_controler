@@ -421,6 +421,8 @@ static void cmd_open_door(const char *data, rt_size_t size)
 	len = rt_sprintf(str, "OK:%04X\n", 0);
 	rt_memcpy(&str[3], data, SESSION_ID_LEN);
 	tcp_write(socket_tcp, (uint8_t *)str, len);
+
+	door_open();
 }
 //************************************************************************************************************
 //by yangwensen@20191114
