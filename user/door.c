@@ -188,7 +188,9 @@ static int8_t door_heart_beat(int sock, char *str)
 	
 	len = rt_sprintf(str, "H:%04X:%s:%d\n", 0xffff, door_info.IMEI, error);
 	ret = tcp_write(sock, (uint8_t *)str, len);
-	
+
+	if(ret !=len)return -3;
+#if 0	
 	ret = recv(sock, str, BUFSZ - 1, 0);
 	if(ret<=0)
 	{
@@ -202,7 +204,7 @@ static int8_t door_heart_beat(int sock, char *str)
         return -2;
 	}
 	LOG_I("[Y]get heart beat pack response ok!\r\n");
-
+#endif
 	return 0;
 }
 //************************************************************************************************************
