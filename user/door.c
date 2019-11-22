@@ -247,7 +247,7 @@ static int tcp_client(char *server_ip, int server_port)
 
 	door_heart_beat(socket_tcp, recv_data);
 //=====================================================================================	
-	timeout.tv_sec = 10;
+	timeout.tv_sec = 30;
 	timeout.tv_usec =  0;
 	setsockopt(socket_tcp, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 	while(1)
