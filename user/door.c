@@ -288,6 +288,7 @@ __TCP_CLIENT_EXIT:
 //by yangwensen@20191113
 static void task_door_server(void* parameter)
 {
+	rt_hw_led_on(1);
 	tcp_client(SERVER_IP, SERVER_PORT);
 	
 	while(1)
@@ -470,7 +471,7 @@ static void cmd_update_soundcode(const char *data, rt_size_t size)
 //by yangwensen@20191114
 static void cmd_volume(const char *data, rt_size_t size)
 {
-	#define CMD_VOLUME_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+2)
+	#define CMD_VOLUME_LEN_MAX	(3+SESSION_ID_LEN+DEVICE_SN_LEN+4+10)
 
 	char *buf;
 	rt_size_t len;
@@ -488,7 +489,7 @@ static void cmd_volume(const char *data, rt_size_t size)
 	index = atoi( resp_get_field((char *)data, size, 1) );
 	volume = atoi( resp_get_field((char *)data, size, 2) );
 	LOG_I("cmd_volume[%d][%d]\r\n", index, volume);
-	len = rt_sprintf(buf, "OK:%04X:%s\n", door_info.session_id, door_info.IMEI);
+	len = rt_sprintf(buf, "OK:%04X:%s:%d:%d\n", door_info.session_id, door_info.IMEI, index, volume);
 	rt_memcpy(&buf[3], data, SESSION_ID_LEN);
 
 	tcp_write(socket_tcp, (uint8_t *)buf, len);
