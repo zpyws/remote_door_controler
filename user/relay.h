@@ -3,7 +3,6 @@
 
 #include <rtthread.h>
 
-void rt_hw_relay_init(void);
 void relay(rt_uint32_t on);
 extern void door_open(void);
 

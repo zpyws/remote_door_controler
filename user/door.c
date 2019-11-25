@@ -105,9 +105,6 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 //by yangwensen@20191112
 extern void door_init(void)
 {
-	rt_hw_led_init();
-	rt_hw_relay_init();
-//=====================================================================================
 //	rt_memset(&door_info, 0, sizeof(door_info));
 	
 //	rt_memcpy(door_info.IMEI, "863412045887166", sizeof(door_info.IMEI)-1);
@@ -288,7 +285,6 @@ __TCP_CLIENT_EXIT:
 //by yangwensen@20191113
 static void task_door_server(void* parameter)
 {
-	rt_hw_led_on(1);
 	tcp_client(SERVER_IP, SERVER_PORT);
 	
 	while(1)

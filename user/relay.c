@@ -18,13 +18,16 @@ static void relay_timer_timeout(void* parameter)
 }
 //****************************************************************************************************
 //by yangwensen@20191107
-void rt_hw_relay_init(void)
+static int rt_hw_relay_init(void)
 {
 	rt_pin_mode(RLY_PIN, PIN_MODE_OUTPUT);
 	relay(0);
 
 	rt_timer_init(&relay_timer, "RLY-TMR", relay_timer_timeout, RT_NULL, DOOR_OPEN_DELAY, RT_TIMER_FLAG_ONE_SHOT|RT_TIMER_FLAG_SOFT_TIMER);
+
+	return RT_EOK;
 }
+INIT_COMPONENT_EXPORT(rt_hw_relay_init);
 //****************************************************************************************************
 //by yangwensen@20191107
 void relay(rt_uint32_t on)

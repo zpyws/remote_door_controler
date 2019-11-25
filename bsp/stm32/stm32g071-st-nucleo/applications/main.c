@@ -12,6 +12,7 @@
 #include <rtdevice.h>
 #include <board.h>
 #include "door.h"
+#include "led.h"
 
 /* defined the LED pin: PA5 */
 #define LED0_PIN     GET_PIN(A, 5)
@@ -29,6 +30,7 @@ int main(void)
         rt_thread_mdelay(500);
         rt_pin_write(LED0_PIN, PIN_LOW);
         rt_thread_mdelay(500);
+		led(2,2);
     }
 
     return RT_EOK;
