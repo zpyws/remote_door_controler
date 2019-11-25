@@ -479,6 +479,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\user\relay.c</FilePath>
             </File>
+            <File>
+              <FileName>base64.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\user\base64.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -518,6 +523,11 @@
               <FileName>drv_common.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\HAL_Drivers\drv_common.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_spi_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\drivers\drv_spi_flash.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -29,6 +29,8 @@ static void cmd_update_soundcode(const char *data, rt_size_t size);
 static void cmd_volume(const char *data, rt_size_t size);
 static void cmd_firmware_update(const char *data, rt_size_t size);
 //************************************************************************************************************
+extern int8_t base64_decode(char * buf, int len);
+//************************************************************************************************************
 #define BUFSZ   1024
 
 #define SESSION_ID_LEN			4
@@ -509,7 +511,8 @@ static uint32_t calc_checksum(char *buff, uint32_t len)
 static void cmd_firmware_update(const char *data, rt_size_t size)
 {
 	#define FIRMWARE_PACK_SHELL_SIZE		(3+SESSION_ID_LEN+DEVICE_SN_LEN+8+8+7)	//协议开销
-	#define FIRMWARE_PACK_TOTAL_SIZE		(FIRMWARE_PACK_SHELL_SIZE+FIRMWARE_PACK_SIZE)
+	#define FIRMWARE_PACK_BASE64_SIZE		((FIRMWARE_PACK_SIZE/3+1)<<2)
+	#define FIRMWARE_PACK_TOTAL_SIZE		(FIRMWARE_PACK_SHELL_SIZE+FIRMWARE_PACK_BASE64_SIZE)
 
 	char *buf;
 	uint32_t len;
@@ -519,6 +522,7 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	uint32_t i;
 	int ret;
 	uint32_t sum = 0;
+	char *p;
 
 	LOG_D("cmd_firmware_update[%d]\r\n", size);
 
@@ -541,7 +545,7 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	for(i=0; i<packs; i++)
 	{
 		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d\r\n", i+1, packs, ret);
-		len = rt_sprintf(buf, "U:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
+		len = rt_sprintf(buf, "OK:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
 cmd_firmware_update_1:
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
@@ -560,11 +564,18 @@ cmd_firmware_update_1:
 			goto cmd_firmware_update_0;
 		}
 //----------------------------------------------------------------------------------------------
+		//base64 decode
+		p = (char *)resp_get_field((char *)buf, size, 3);	//get base64 data field
+		if(p==RT_NULL)goto cmd_firmware_update_2;			//illeagal data structure
+
+		ret = base64_decode(p, ret-(p-buf));
+		if(ret<0)goto cmd_firmware_update_2;
+
 		LOG_I("[Y]Firmware Pack %d of %d, size=%d\r\n", i, packs, ret);
 		offset += ret;
-		sum += calc_checksum(buf, ret);
+		sum += calc_checksum(p, ret);
 
-		memdump((uint8_t *)buf, ret);
+		memdump((uint8_t *)p, ret);
 	}
 //----------------------------------------------------------------------------------------------
 	if(i<packs)							//recieve timeout
