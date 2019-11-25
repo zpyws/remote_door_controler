@@ -1,9 +1,14 @@
 //created by yangwensen@20191125
 #include <rtthread.h>
 //***************************************************************************************
-extern void memdump(uint8_t *buff, uint16_t len);
-
-#define BASE64_DBG		rt_kprintf
+#define EN_BASE64_TEST			0
+//***************************************************************************************
+#if EN_BASE64_TEST
+	extern void memdump(uint8_t *buff, uint16_t len);
+	#define BASE64_DBG(...)			rt_kprintf(__VA_ARGS__)
+#else
+	#define BASE64_DBG(...)		
+#endif
 //***************************************************************************************
 #if 0
 static const char base64[64] = 
@@ -76,49 +81,41 @@ static int8_t base64_decrypt(const char * cbuf, char * pbuf)
 extern int8_t base64_decode(char * buf, int len)
 {
 	char *pbuf;
-	int plen;
 	int i;
 	uint32_t n = 0;
 	int8_t ret;
 
 	if(len & 3)return -1;
+	
+	pbuf = buf;
 
-    plen = len / 4;
-
-    pbuf = rt_malloc(plen*3);
-    if (pbuf == RT_NULL)
-    {
-        rt_kprintf("No memory\r\n");
-        return -2;
-    }
-
-    rt_memset(pbuf, 0, plen*3);
-
-    for(i=0; i < plen; i++)
+    for(i=0; i<(len>>2); i++)
 	{
 		ret = base64_decrypt(&buf[i*4], &pbuf[i*3]);
-        if( ret < 0)return -3;
+        if(ret < 0)return -3;
 		n += ret;
     }
-	rt_kprintf("before decode\r\n");
-    memdump((uint8_t *)buf, len);
-	rt_kprintf("after decode\r\n");
-    memdump((uint8_t *)pbuf, n);
 
-    rt_free(pbuf);
-	return plen*3;
+#if EN_BASE64_TEST
+	BASE64_DBG("before decode\r\n");
+    memdump((uint8_t *)buf, len);
+	BASE64_DBG("after decode\r\n");
+    memdump((uint8_t *)pbuf, n);
+#endif
+
+	return n;
 }
-/**
-*/
 //***************************************************************************************
+#if EN_BASE64_TEST
 void base64_test(void)
 {
-	const char BASE64_STR[] = "MTIzNDU2Nzg5MA==";
-	const char BASE64_STR2[] = "MTIzNDU2Nzg5MDk=";
-	const char BASE64_STR3[] = "MTIzNDU2Nzg5MDk4";
+	char BASE64_STR[] = "MTIzNDU2Nzg5MA==";
+	char BASE64_STR2[] = "MTIzNDU2Nzg5MDk=";
+	char BASE64_STR3[] = "MTIzNDU2Nzg5MDk4";
 
 	base64_decode((char *)BASE64_STR, sizeof(BASE64_STR)-1);
 	base64_decode((char *)BASE64_STR2, sizeof(BASE64_STR2)-1);
 	base64_decode((char *)BASE64_STR3, sizeof(BASE64_STR3)-1);
 }
+#endif
 //***************************************************************************************
