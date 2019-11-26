@@ -29,7 +29,7 @@ static void cmd_update_soundcode(const char *data, rt_size_t size);
 static void cmd_volume(const char *data, rt_size_t size);
 static void cmd_firmware_update(const char *data, rt_size_t size);
 //************************************************************************************************************
-extern int8_t base64_decode(char * buf, int len);
+extern int base64_decode(char * buf, int len);
 //************************************************************************************************************
 #define BUFSZ   1024
 
@@ -557,7 +557,7 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	for(i=0; i<packs; i++)
 	{
 		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d", i+1, packs, FIRMWARE_PACK_SIZE);
-		len = rt_sprintf(buf, "OK:%s:%s:%s:%d:%d\n", session, door_info.IMEI, version, offset, FIRMWARE_PACK_SIZE);
+		len = rt_sprintf(buf, "U:%s:%s:%s:%d:%d\n", session, door_info.IMEI, version, offset, FIRMWARE_PACK_SIZE);
 cmd_firmware_update_1:
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
@@ -576,12 +576,24 @@ cmd_firmware_update_1:
 			goto cmd_firmware_update_0;
 		}
 //----------------------------------------------------------------------------------------------
-		//base64 decode
-		p = (char *)resp_get_field((char *)buf, size, 3);	//get base64 data field
-		if(p==RT_NULL)goto cmd_firmware_update_2;			//illeagal data structure
+		LOG_D("[SERVER->MCU][%d]: %.*s", ret, ret, buf);
 
-		ret = base64_decode(p, ret-(p-buf));
-		if(ret<0)goto cmd_firmware_update_2;
+		//base64 decode
+		p = (char *)resp_get_field((char *)buf, ret, 3);	//get base64 data field
+		if(p==RT_NULL)										//illeagal data structure
+		{
+			LOG_E("[Y]dfu get base64 field failed\r\n");
+			ret = -3;
+			goto cmd_firmware_update_2;			
+		}
+
+		ret = base64_decode(p, ret-(p-buf)-1);
+		if(ret<0)
+		{
+			LOG_E("[Y]dfu base64 decode failed[%d]", ret);
+			ret = -4;
+			goto cmd_firmware_update_2;			
+		}
 
 		LOG_I("[Y]Firmware Pack %d of %d, size=%d\r\n", i, packs, ret);
 		offset += ret;
@@ -593,6 +605,7 @@ cmd_firmware_update_1:
 	if(i<packs)							//recieve timeout
 	{
 cmd_firmware_update_2:
+		LOG_E("[Y]dfu unsuccessfully[%d]", ret);
 		len = rt_sprintf(buf, "ERR:%s\n", session);
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 		rt_free(buf);
