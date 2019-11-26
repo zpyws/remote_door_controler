@@ -27,7 +27,7 @@
 {                                                \
     .mode = RT_SPI_MODE_0 | RT_SPI_MSB,          \
     .data_width = 8,                             \
-    .max_hz = 50 * 1000 * 1000,                  \
+    .max_hz = 31 * 1000 * 1000,                  \
 }
 #endif
 
