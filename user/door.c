@@ -37,6 +37,7 @@ extern int8_t base64_decode(char * buf, int len);
 #define DEVICE_SN_LEN			15//size(door_info.IMEI)
 #define SOUND_MD5_LEN			32
 #define MAX_SOUND_CLIPS			4
+#define MAX_VERSION_STR_LEN		16
 
 #define FIRMWARE_PACK_SIZE		512
 
@@ -359,7 +360,7 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
 	if( i >= ARRAY_SIZE(door_urc_table) )
 		return -1;
 	
-	LOG_I("[Y]cmd[%d] found\r\n", i);
+//	LOG_D("[Y]cmd[%d] found\r\n", i);
 	
 	if(door_urc_table[i].func == RT_NULL)
 		return -2;
@@ -521,7 +522,8 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	uint32_t i;
 	int ret;
 	uint32_t sum = 0;
-	char *p;
+	char *p,*p1;
+	char version[MAX_VERSION_STR_LEN];
 
 	LOG_D("cmd_firmware_update[%d]\r\n", size);
 
@@ -535,16 +537,27 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	rt_memcpy(session, data, SESSION_ID_LEN);
 	session[SESSION_ID_LEN] = 0;
 
-	firmware_info.checksum = atoi( resp_get_field((char *)data, size, 2) );
+	p = (char *)resp_get_field((char *)data, size, 1);		//get version field
+	if(p==RT_NULL)goto cmd_firmware_update_2;
+
+	p1 = (char *)resp_get_field((char *)data, size, 2);		//get checksum field
+	if(p1==RT_NULL)goto cmd_firmware_update_2;
+
+	//get version string
+	len = (p1-p > MAX_VERSION_STR_LEN) ? MAX_VERSION_STR_LEN-1 : (p1-p-1);
+	rt_memcpy(version, p, len);
+	version[len] = 0;
+
+	firmware_info.checksum = atoi( p1 );
 	firmware_info.size = atoi( resp_get_field((char *)data, size, 3) );
-	LOG_I("DFU[%6s][sum=0x%08X][size=%d]\r\n", resp_get_field((char *)data, size, 1), firmware_info.checksum, firmware_info.size );
+	LOG_I("DFU[%6s][sum=0x%08X][size=%d]\r\n", p, firmware_info.checksum, firmware_info.size );
 
 	packs = firmware_info.size / FIRMWARE_PACK_SIZE;
 
 	for(i=0; i<packs; i++)
 	{
 		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d", i+1, packs, FIRMWARE_PACK_SIZE);
-		len = rt_sprintf(buf, "OK:%s:%s:%s:%d:%d\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
+		len = rt_sprintf(buf, "OK:%s:%s:%s:%d:%d\n", session, door_info.IMEI, version, offset, FIRMWARE_PACK_SIZE);
 cmd_firmware_update_1:
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
@@ -588,7 +601,7 @@ cmd_firmware_update_2:
 //----------------------------------------------------------------------------------------------
 	if(offset < firmware_info.size)		//do we have the last packet?
 	{
-		len = rt_sprintf(buf, "U:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, firmware_info.size % FIRMWARE_PACK_SIZE);
+		len = rt_sprintf(buf, "U:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, version, offset, firmware_info.size % FIRMWARE_PACK_SIZE);
 		LOG_D("[Y]Request Last Firmware Pack, size=%d\r\n", firmware_info.size % FIRMWARE_PACK_SIZE);
 		goto cmd_firmware_update_1;
 	}
@@ -601,7 +614,7 @@ cmd_firmware_update_2:
 //----------------------------------------------------------------------------------------------
 	//firmware download successfully
 	LOG_I("[Y]Firmware Download Successful,total size %d bytes\r\n", firmware_info.size);
-	len = rt_sprintf(buf, "OK:%s:%s:%s\n", session, door_info.IMEI, FW_VERSION);
+	len = rt_sprintf(buf, "OK:%s:%s:%s\n", session, door_info.IMEI, version);
 	tcp_write(socket_tcp, (uint8_t *)buf, len);
 
 cmd_firmware_update_0:
