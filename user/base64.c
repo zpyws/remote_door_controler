@@ -78,11 +78,11 @@ static int8_t base64_decrypt(const char * cbuf, char * pbuf)
 }
 //***************************************************************************************
 //by yangwensen@20191125
-extern int8_t base64_decode(char * buf, int len)
+extern int base64_decode(char * buf, int len)
 {
 	char *pbuf;
 	int i;
-	uint32_t n = 0;
+	int32_t n = 0;
 	int8_t ret;
 
 	if(len & 3)return -1;
