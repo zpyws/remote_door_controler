@@ -415,12 +415,12 @@ int door_resp_parse_line_args(const char *resp_line_buf, const char *resp_expr, 
 //by yangwensen@20191114
 static void cmd_open_door(const char *data, rt_size_t size)
 {
-	char str[4+SESSION_ID_LEN+1];
+	char str[4+SESSION_ID_LEN+DEVICE_SN_LEN+2];
 	uint8_t len;
 	
 	LOG_D("cmd_open_door[%d]\r\n", size);
 	
-	len = rt_sprintf(str, "OK:%04X\n", 0);
+	len = rt_sprintf(str, "OK:%04X:%s\n", 0, door_info.IMEI);
 	rt_memcpy(&str[3], data, SESSION_ID_LEN);
 	tcp_write(socket_tcp, (uint8_t *)str, len);
 
