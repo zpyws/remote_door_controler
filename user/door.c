@@ -96,6 +96,7 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 {
 	int ret;
 	
+	LOG_D("[MCU->SERVER][%d]: %.*s", len, len, buff);
 	memdump(buff, len);
 	ret = send(sock, buff, len, 0);
 	if(ret!=len)LOG_E("[Y]TCP send %d bytes of %d\r\n", ret, len);
@@ -337,9 +338,7 @@ static int8_t recv_data_resolve(char *buffer, uint32_t buf_sz)
     rt_size_t i, prefix_len, suffix_len;
 
 	memdump((uint8_t *)buffer, buf_sz);
-	
-	buffer[buf_sz] = 0;
-	LOG_I("%s\r\n", buffer);
+	LOG_D("[SERVER->MCU][%d]: %.*s", buf_sz, buf_sz, buffer);
 	
     for (i = 0; i < ARRAY_SIZE(door_urc_table); i++)
     {
@@ -538,14 +537,14 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 
 	firmware_info.checksum = atoi( resp_get_field((char *)data, size, 2) );
 	firmware_info.size = atoi( resp_get_field((char *)data, size, 3) );
-	LOG_I("DFU[%s][sum=0x%08X][size=0x%08X]\r\n", resp_get_field((char *)data, size, 1), firmware_info.checksum, firmware_info.size );
+	LOG_I("DFU[%6s][sum=0x%08X][size=%d]\r\n", resp_get_field((char *)data, size, 1), firmware_info.checksum, firmware_info.size );
 
 	packs = firmware_info.size / FIRMWARE_PACK_SIZE;
 
 	for(i=0; i<packs; i++)
 	{
-		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d\r\n", i+1, packs, ret);
-		len = rt_sprintf(buf, "OK:%s:%s:%s:%08x:%08x\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
+		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d", i+1, packs, FIRMWARE_PACK_SIZE);
+		len = rt_sprintf(buf, "OK:%s:%s:%s:%d:%d\n", session, door_info.IMEI, FW_VERSION, offset, FIRMWARE_PACK_SIZE);
 cmd_firmware_update_1:
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 //----------------------------------------------------------------------------------------------
