@@ -289,12 +289,12 @@ __TCP_CLIENT_EXIT:
 //by yangwensen@20191113
 static void task_door_server(void* parameter)
 {
-	tcp_client(SERVER_IP, SERVER_PORT);
 	
 	while(1)
 	{
+		tcp_client(SERVER_IP, SERVER_PORT);
         rt_thread_mdelay(1000);	
-		LOG_E("[Y]socket closed\r\n");
+		LOG_E("[Y]****************socket closed*********************\r\n");
 	}
 }
 //************************************************************************************************************
