@@ -14,23 +14,14 @@
 #include "door.h"
 #include "led.h"
 
-/* defined the LED pin: PA5 */
-#define LED0_PIN     GET_PIN(A, 5)
-
 int main(void)
 {
-    int count = 1;
-    /* set LED0 pin mode to output */
-    rt_pin_mode(LED0_PIN, PIN_MODE_OUTPUT);
 	door_init();
 
-    while (count++)
+    while (1)
     {
-        rt_pin_write(LED0_PIN, PIN_HIGH);
         rt_thread_mdelay(500);
-        rt_pin_write(LED0_PIN, PIN_LOW);
-        rt_thread_mdelay(500);
-		led(2,2);
+		led(0,2);
     }
 
     return RT_EOK;
