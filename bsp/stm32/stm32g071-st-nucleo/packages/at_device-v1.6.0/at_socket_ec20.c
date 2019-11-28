@@ -1269,17 +1269,17 @@ static void ec20_init_thread_entry(void *parameter)
     {
         /* "CMCC" */
         LOG_I("%s", parsed_data);
-        AT_SEND_CMD(resp, 0, 300, QICSGP_CHINA_MOBILE);
+        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_MOBILE);
     }
     else if(strcmp(parsed_data,"CHN-UNICOM") == 0)
     {
         /* "UNICOM" */
         LOG_I("%s", parsed_data);
-        AT_SEND_CMD(resp, 0, 300, QICSGP_CHINA_UNICOM);
+        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_UNICOM);
     }
     else if(strcmp(parsed_data,"CHN-CT") == 0)
     {
-        AT_SEND_CMD(resp, 0, 300, QICSGP_CHINA_TELECOM);
+        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_TELECOM);
         /* "CT" */
         LOG_I("%s", parsed_data);
     }
