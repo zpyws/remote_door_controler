@@ -1186,7 +1186,7 @@ static void ec20_init_thread_entry(void *parameter)
     }
 
     /* Use AT+QCCID to query ICCID number of SIM card */
-    AT_SEND_CMD(resp, 0, 300, "AT+QCCID");
+    AT_SEND_CMD(resp, 0, 1000, "AT+QCCID");
 	if (at_resp_parse_line_args_by_kw(resp, "+QCCID:", "+QCCID: %s", door_info.ICCID) <= 0)	//by yangwensen@20191113
 	{
 		LOG_E("Prase \"AT+QCCID\" commands resposne data error!");
