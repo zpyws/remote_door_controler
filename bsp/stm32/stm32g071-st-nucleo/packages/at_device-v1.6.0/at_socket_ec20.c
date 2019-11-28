@@ -1201,7 +1201,14 @@ static void ec20_init_thread_entry(void *parameter)
     /* check signal strength */
     for (i = 0; i < CSQ_RETRY; i++)
     {
-        AT_SEND_CMD(resp, 0, 300, "AT+CSQ");
+//        AT_SEND_CMD(resp, 0, 300, "AT+CSQ");
+		if(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(300)), "AT+CSQ") < 0)
+		{
+			LOG_D("AT+CSQ timeout[%d]", i);
+			rt_thread_mdelay(1000);
+			continue;
+		}
+
         at_resp_parse_line_args_by_kw(resp, "+CSQ:", "+CSQ: %d,%d", &qi_arg[0], &qi_arg[1]);
         if (qi_arg[0] != 99)
         {
