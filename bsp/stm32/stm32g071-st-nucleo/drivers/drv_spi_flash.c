@@ -13,8 +13,6 @@
 //#include "spi_flash.h"
 #include "spi_flash_sfud.h"
 
-#include <dfs_fs.h>
-
 static int rt_hw_spi_flash_with_sfud_init(void)
 {
 	rt_err_t result;
@@ -29,15 +27,6 @@ static int rt_hw_spi_flash_with_sfud_init(void)
     if (RT_NULL == rt_sfud_flash_probe("W25Q128", "spi10"))
     {
         return RT_ERROR;
-    }
-
-    if (dfs_mount("W25Q128", "/", "elm", 0, 0) == 0)
-    {
-        rt_kprintf("spi flash mount to / !\n");
-    }
-    else
-    {
-        rt_kprintf("spi flash mount to / failed!\n");
     }
 
 	return RT_EOK;

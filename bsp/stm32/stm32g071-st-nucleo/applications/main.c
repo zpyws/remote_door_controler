@@ -13,9 +13,19 @@
 #include <board.h>
 #include "door.h"
 #include "led.h"
+#include <dfs_fs.h>
 
 int main(void)
 {
+    if (dfs_mount("W25Q128", "/", "elm", 0, 0) == 0)
+    {
+        rt_kprintf("spi flash mount to / !\n");
+    }
+    else
+    {
+        rt_kprintf("spi flash mount to / failed!\n");
+    }
+
 	door_init();
 
     while (1)
