@@ -21,6 +21,6 @@ int main(void)
     while (1)
     {
         rt_thread_mdelay(500);
-		led(0,2);
+		rt_hw_led_tog(0);
     }
 }
