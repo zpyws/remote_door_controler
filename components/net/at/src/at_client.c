@@ -355,7 +355,7 @@ int at_client_obj_wait_connect(at_client_t client, rt_uint32_t timeout)
         return -RT_ERROR;
     }
 
-    resp = at_create_resp(16, 0, rt_tick_from_millisecond(500));
+    resp = at_create_resp(32, 0, rt_tick_from_millisecond(500));
     if (resp == RT_NULL)
     {
         LOG_E("No memory for response object!");
