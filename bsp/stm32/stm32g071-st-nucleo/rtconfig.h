@@ -201,13 +201,11 @@
 
 /* Onboard Peripheral Drivers */
 
-#define BSP_USING_USB_TO_USART
 
 /* On-chip Peripheral Drivers */
 
 #define BSP_USING_GPIO
 #define BSP_USING_UART
-#define BSP_USING_LPUART1
 #define BSP_USING_UART1
 #define BSP_USING_UART2
 #define BSP_USING_SPI
