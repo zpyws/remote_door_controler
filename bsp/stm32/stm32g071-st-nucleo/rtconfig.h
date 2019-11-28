@@ -131,11 +131,9 @@
 /* AT commands */
 
 #define RT_USING_AT
-#define AT_DEBUG
 #define AT_USING_CLIENT
 #define AT_CLIENT_NUM_MAX 1
 #define AT_USING_SOCKET
-#define AT_USING_CLI
 #define AT_CMD_MAX_LEN 128
 #define AT_SW_VERSION_NUM 0x10200
 
