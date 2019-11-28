@@ -1096,6 +1096,7 @@ static void ec20_init_thread_entry(void *parameter)
 #define CGREG_RETRY                    20
 #define CPIN_RETRY					   10
 #define CTZU_RETRY					   5
+#define GSN_RETRY					   10
 
     at_response_t resp = RT_NULL;
     int i, qi_arg[3];
@@ -1367,7 +1368,7 @@ static int ec20_netdev_set_info(struct netdev *netdev)
 #define EC20_IEMI_RESP_SIZE      32
 #define EC20_IPADDR_RESP_SIZE    64
 #define EC20_DNS_RESP_SIZE       96
-#define EC20_INFO_RESP_TIMO      rt_tick_from_millisecond(300)
+#define EC20_INFO_RESP_TIMO      rt_tick_from_millisecond(2000)
 
     int result = RT_EOK;
     at_response_t resp = RT_NULL;
