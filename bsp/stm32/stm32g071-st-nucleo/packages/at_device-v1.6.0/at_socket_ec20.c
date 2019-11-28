@@ -1300,7 +1300,7 @@ static void ec20_init_thread_entry(void *parameter)
     }
 
     /* Get RTC time */
-    AT_SEND_CMD(resp, 0, 300, "AT+CCLK?");
+    AT_SEND_CMD(resp, 0, 1000, "AT+CCLK?");
 
     /* Deactivate context profile */
     AT_SEND_CMD(resp, 0, 40 * 1000, "AT+QIDEACT=1");
