@@ -1098,6 +1098,7 @@ static void ec20_init_thread_entry(void *parameter)
 #define CREG_RETRY                     10
 #define CGREG_RETRY                    20
 #define CPIN_RETRY					   10
+#define CTZU_RETRY					   5
 
     at_response_t resp = RT_NULL;
     int i, qi_arg[3];
@@ -1283,7 +1284,21 @@ static void ec20_init_thread_entry(void *parameter)
         LOG_I("%s", parsed_data);
     }
     /* Enable automatic time zone update via NITZ and update LOCAL time to RTC */
-    AT_SEND_CMD(resp, 0, 300, "AT+CTZU=3");
+//    AT_SEND_CMD(resp, 0, 300, "AT+CTZU=3");
+    i = 0;
+    while(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(2000)), "AT+CTZU=3") < 0)
+    {
+        i++;
+        LOG_D("AT+CTZU [%d]", i);
+        if(i > CTZU_RETRY)
+        {
+            LOG_E("Enable Automatic Timezone Update failed");
+            result = -RT_ERROR;
+            goto __exit;
+        }
+        rt_thread_mdelay(1000);
+    }
+
     /* Get RTC time */
     AT_SEND_CMD(resp, 0, 300, "AT+CCLK?");
 
