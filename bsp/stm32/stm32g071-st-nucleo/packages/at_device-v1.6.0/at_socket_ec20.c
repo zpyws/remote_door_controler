@@ -1173,7 +1173,7 @@ static void ec20_init_thread_entry(void *parameter)
     /* Use AT+CIMI to query the IMSI of SIM card */
 //    AT_SEND_CMD(resp, 2, 300, "AT+CIMI");
     i = 0;
-    while(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(300)), "AT+CIMI") < 0)
+    while(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(1000)), "AT+CIMI") < 0)
     {
         i++;
         LOG_D("AT+CIMI %d", i);
@@ -1200,7 +1200,7 @@ static void ec20_init_thread_entry(void *parameter)
     for (i = 0; i < CSQ_RETRY; i++)
     {
 //        AT_SEND_CMD(resp, 0, 300, "AT+CSQ");
-		if(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(300)), "AT+CSQ") < 0)
+		if(at_exec_cmd(at_resp_set_info(resp, 128, 0, rt_tick_from_millisecond(1000)), "AT+CSQ") < 0)
 		{
 			LOG_D("AT+CSQ timeout[%d]", i);
 			rt_thread_mdelay(1000);
@@ -1224,7 +1224,7 @@ static void ec20_init_thread_entry(void *parameter)
     /* check the GSM network is registered */
     for (i = 0; i < CREG_RETRY; i++)
     {
-        AT_SEND_CMD(resp, 0, 300, "AT+CREG?");
+        AT_SEND_CMD(resp, 0, 1000, "AT+CREG?");
         at_resp_parse_line_args_by_kw(resp, "+CREG:", "+CREG: %s", &parsed_data);
         if (!strncmp(parsed_data, "0,1", sizeof(parsed_data)) || !strncmp(parsed_data, "0,5", sizeof(parsed_data)))
         {
@@ -1242,7 +1242,7 @@ static void ec20_init_thread_entry(void *parameter)
     /* check the GPRS network is registered */
     for (i = 0; i < CGREG_RETRY; i++)
     {
-        AT_SEND_CMD(resp, 0, 300, "AT+CGREG?");
+        AT_SEND_CMD(resp, 0, 1000, "AT+CGREG?");
         at_resp_parse_line_args_by_kw(resp, "+CGREG:", "+CGREG: %s", &parsed_data);
         if (!strncmp(parsed_data, "0,1", sizeof(parsed_data)) || !strncmp(parsed_data, "0,5", sizeof(parsed_data)))
         {
@@ -1258,25 +1258,25 @@ static void ec20_init_thread_entry(void *parameter)
         goto __exit;
     }
     /*Use AT+CEREG? to query current EPS Network Registration Status*/
-    AT_SEND_CMD(resp, 0, 300, "AT+CEREG?");
+    AT_SEND_CMD(resp, 0, 1000, "AT+CEREG?");
     /* Use AT+COPS? to query current Network Operator */
-    AT_SEND_CMD(resp, 0, 300, "AT+COPS?");
+    AT_SEND_CMD(resp, 0, 1000, "AT+COPS?");
     at_resp_parse_line_args_by_kw(resp, "+COPS:", "+COPS: %*[^\"]\"%[^\"]", &parsed_data);
     if(strcmp(parsed_data,"CHINA MOBILE") == 0)
     {
         /* "CMCC" */
         LOG_I("%s", parsed_data);
-        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_MOBILE);
+        AT_SEND_CMD(resp, 0, 1000, QICSGP_CHINA_MOBILE);
     }
     else if(strcmp(parsed_data,"CHN-UNICOM") == 0)
     {
         /* "UNICOM" */
         LOG_I("%s", parsed_data);
-        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_UNICOM);
+        AT_SEND_CMD(resp, 0, 1000, QICSGP_CHINA_UNICOM);
     }
     else if(strcmp(parsed_data,"CHN-CT") == 0)
     {
-        AT_SEND_CMD(resp, 0, 500, QICSGP_CHINA_TELECOM);
+        AT_SEND_CMD(resp, 0, 1000, QICSGP_CHINA_TELECOM);
         /* "CT" */
         LOG_I("%s", parsed_data);
     }
@@ -1609,7 +1609,7 @@ static int ec20_netdev_set_down(struct netdev *netdev)
 static int ec20_netdev_set_dns_server(struct netdev *netdev, uint8_t dns_num, ip_addr_t *dns_server)
 {
 #define EC20_DNS_RESP_LEN    8
-#define EC20_DNS_RESP_TIMEO  rt_tick_from_millisecond(300)
+#define EC20_DNS_RESP_TIMEO  rt_tick_from_millisecond(1000)
 
     at_response_t resp = RT_NULL;
     int result = RT_EOK;
