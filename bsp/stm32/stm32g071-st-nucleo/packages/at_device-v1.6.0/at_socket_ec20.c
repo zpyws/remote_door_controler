@@ -1105,9 +1105,8 @@ static void ec20_init_thread_entry(void *parameter)
 //======================================================================================	
 	//by yangwensen@20191112
     rt_memset(parsed_data, 0, sizeof(parsed_data));
+    LOG_D("[Y]Power up the EC200T module");
     ec20_power_on();
-    LOG_D("[Y]EC20 module powered on,now waiting for RDY...");
-    rt_thread_mdelay(4000);
 //======================================================================================	
     resp = at_create_resp(128, 0, rt_tick_from_millisecond(300));
     if (!resp)
@@ -1116,7 +1115,7 @@ static void ec20_init_thread_entry(void *parameter)
         result = -RT_ENOMEM;
         goto __exit;
     }
-    LOG_D("Start initializing the EC20 module");
+    LOG_D("[Y]Power Done! Start initializing the EC20 module");
 	
     /* wait EC20 startup finish, Send AT every 500ms, if receive OK, SYNC success*/
     if (at_client_wait_connect(EC20_WAIT_CONNECT_TIME))
