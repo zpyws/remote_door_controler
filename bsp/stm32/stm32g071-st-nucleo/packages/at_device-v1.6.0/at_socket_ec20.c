@@ -1050,36 +1050,33 @@ static const struct at_urc urc_table[] = {
 static void ec20_power_on(void)
 {
 	rt_pin_write(GSM_POWER_PIN, PIN_HIGH);		//by yangwensen@20191112
-    rt_thread_mdelay(50);
-#if 0
-    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
+//    rt_thread_mdelay(50);
+
+    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
         return;
-#endif
+
     rt_pin_write(AT_DEVICE_POWER_PIN, PIN_HIGH);
-#if 0
-    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
+    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
     {
         rt_thread_mdelay(10);
     }
-#endif
-	rt_thread_mdelay(550);
+
+//	rt_thread_mdelay(550);
     rt_pin_write(AT_DEVICE_POWER_PIN, PIN_LOW);
 }
 //by yangwensen@20191112
 static void ec20_power_off(void)
 {
-#if 0
-    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
+    if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
         return;
-#endif
+
     rt_pin_write(AT_DEVICE_POWER_PIN, PIN_HIGH);
-#if 0
-    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
+    while (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_LOW)
     {
         rt_thread_mdelay(10);
     }
-#endif
-	rt_thread_mdelay(550);
+
+//	rt_thread_mdelay(550);
     rt_pin_write(AT_DEVICE_POWER_PIN, PIN_LOW);
 	
     rt_thread_mdelay(50);
@@ -1328,7 +1325,7 @@ __exit:
     else
     {
         LOG_E("AT network initialize failed (%d)!", result);
-//		ec20_power_off();
+		ec20_power_off();
     }
 
 }
@@ -1801,7 +1798,7 @@ static int at_socket_device_init(void)
     /* initialize EC20 network */
     rt_pin_mode(GSM_POWER_PIN, PIN_MODE_OUTPUT);
     rt_pin_mode(AT_DEVICE_POWER_PIN, PIN_MODE_OUTPUT);
-    rt_pin_mode(AT_DEVICE_STATUS_PIN, PIN_MODE_INPUT);
+    rt_pin_mode(AT_DEVICE_STATUS_PIN, PIN_MODE_INPUT_PULLUP);
     ec20_net_init();
 
     /* set EC20 AT Socket options */
