@@ -1141,7 +1141,7 @@ static void ec20_init_thread_entry(void *parameter)
         LOG_D("%s", at_resp_get_line(resp, i + 1));
     }
     /* Use AT+GSN to query the IMEI of module */
-    AT_SEND_CMD(resp, 0, 300, "AT+GSN");
+    AT_SEND_CMD(resp, 0, 2000, "AT+GSN");
     
     /* check SIM card */
 //	AT_SEND_CMD(resp, 2, 5 * 1000, "AT+CPIN?");
@@ -1186,7 +1186,7 @@ static void ec20_init_thread_entry(void *parameter)
     }
 
     /* Use AT+QCCID to query ICCID number of SIM card */
-    AT_SEND_CMD(resp, 0, 1000, "AT+QCCID");
+    AT_SEND_CMD(resp, 0, 2000, "AT+QCCID");
 	if (at_resp_parse_line_args_by_kw(resp, "+QCCID:", "+QCCID: %s", door_info.ICCID) <= 0)	//by yangwensen@20191113
 	{
 		LOG_E("Prase \"AT+QCCID\" commands resposne data error!");
