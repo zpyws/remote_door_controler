@@ -1050,8 +1050,7 @@ static const struct at_urc urc_table[] = {
 static void ec20_power_on(void)
 {
 	rt_pin_write(GSM_POWER_PIN, PIN_HIGH);		//by yangwensen@20191112
-    rt_thread_mdelay(100);
-	
+    rt_thread_mdelay(50);
 #if 0
     if (rt_pin_read(AT_DEVICE_STATUS_PIN) == PIN_HIGH)
         return;
@@ -1098,6 +1097,7 @@ static void ec20_init_thread_entry(void *parameter)
 #define CSQ_RETRY                      20
 #define CREG_RETRY                     10
 #define CGREG_RETRY                    20
+#define CPIN_RETRY					   10
 
     at_response_t resp = RT_NULL;
     int i, qi_arg[3];
@@ -1147,13 +1147,27 @@ static void ec20_init_thread_entry(void *parameter)
     AT_SEND_CMD(resp, 0, 300, "AT+GSN");
     
     /* check SIM card */
-    AT_SEND_CMD(resp, 2, 5 * 1000, "AT+CPIN?");
-    if (!at_resp_get_line_by_kw(resp, "READY"))
+//	AT_SEND_CMD(resp, 2, 5 * 1000, "AT+CPIN?");
+	i = 0;
+    while(at_exec_cmd(at_resp_set_info(resp, 128, 2, rt_tick_from_millisecond(5*1000)), "AT+CPIN?") < 0)
     {
-        LOG_E("SIM card detection failed");
-        result = -RT_ERROR;
-        goto __exit;
+        i++;
+        LOG_D("AT+CPIN? [%d]", i);
+        if(i > CPIN_RETRY)
+        {
+            LOG_E("AT+CPIN? failed in %d times", i);
+            result = -RT_ERROR;
+            goto __exit;
+        }
+        rt_thread_mdelay(1000);
     }
+	if (!at_resp_get_line_by_kw(resp, "READY"))
+	{
+		LOG_E("SIM card detection failed");
+		result = -RT_ERROR;
+		goto __exit;
+	}
+
     /* waiting for dirty data to be digested */
     rt_thread_mdelay(10);
     
@@ -1292,7 +1306,7 @@ __exit:
     else
     {
         LOG_E("AT network initialize failed (%d)!", result);
-		ec20_power_off();
+//		ec20_power_off();
     }
 
 }
@@ -1765,7 +1779,7 @@ static int at_socket_device_init(void)
     /* initialize EC20 network */
     rt_pin_mode(GSM_POWER_PIN, PIN_MODE_OUTPUT);
     rt_pin_mode(AT_DEVICE_POWER_PIN, PIN_MODE_OUTPUT);
-//    rt_pin_mode(AT_DEVICE_STATUS_PIN, PIN_MODE_INPUT);
+    rt_pin_mode(AT_DEVICE_STATUS_PIN, PIN_MODE_INPUT);
     ec20_net_init();
 
     /* set EC20 AT Socket options */
