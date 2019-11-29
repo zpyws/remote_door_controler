@@ -65,7 +65,7 @@ static const char FW_VERSION[] = "V1.0.0";
 struct
 {
 	uint32_t size;
-	uint32_t checksum;
+	int32_t checksum;
 }firmware_info;
 //************************************************************************************************************
 //#define DOOR_WRITE(a,b)		memdump((uint8_t *)(a),b)
@@ -509,9 +509,9 @@ static void cmd_volume(const char *data, rt_size_t size)
 }
 //************************************************************************************************************
 //by yangwensen@20191120
-static uint32_t calc_checksum(char *buff, uint32_t len)
+static int32_t calc_checksum(const char *buff, uint32_t len)
 {
-	uint32_t sum = 0;
+	int32_t sum = 0;
 
 	while(len--)
 	{
@@ -534,12 +534,12 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	uint32_t packs;
 	uint32_t i;
 	int ret;
-	uint32_t sum = 0;
+	int32_t sum = 0;
 	char *p,*p1;
 	char version[MAX_VERSION_STR_LEN];
 	int fd = -1;
 	int result;
-	uint32_t pack_checksum;
+	int32_t pack_checksum;
 
 	LOG_D("cmd_firmware_update[%d]\r\n", size);
 
@@ -627,10 +627,10 @@ cmd_firmware_update_1:
 
 		LOG_I("[Y]Firmware Pack %d of %d, size=%d", i, packs, ret);
 		offset += ret;
-		len = calc_checksum(p, ret);		//sub pack checksum
-		if(len!=pack_checksum)
+		result = calc_checksum(p, ret);		//sub pack checksum
+		if(result!=pack_checksum)
 		{
-			LOG_E("[DFU][sub-checksum]SRV=%d,MCU=%d", pack_checksum, len);
+			LOG_E("[DFU][sub-checksum]SRV=%d,MCU=%d", pack_checksum, result);
 			ret = -5;
 			goto cmd_firmware_update_2;
 		}
