@@ -539,6 +539,7 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	char version[MAX_VERSION_STR_LEN];
 	int fd = -1;
 	int result;
+	uint32_t pack_checksum;
 
 	LOG_D("cmd_firmware_update[%d]\r\n", size);
 
@@ -600,8 +601,12 @@ cmd_firmware_update_1:
 //----------------------------------------------------------------------------------------------
 		LOG_D("[SERVER->MCU][%d]: %.*s", ret, ret, buf);
 
+		//get session id
 		rt_memcpy(session, resp_get_field((char *)buf, ret, 1), SESSION_ID_LEN);
 		session[SESSION_ID_LEN] = 0;
+
+		//get sub pack checksum
+		pack_checksum = atoi( resp_get_field((char *)buf, ret, 2) );
 
 		//base64 decode
 		p = (char *)resp_get_field((char *)buf, ret, 3);	//get base64 data field
@@ -622,14 +627,21 @@ cmd_firmware_update_1:
 
 		LOG_I("[Y]Firmware Pack %d of %d, size=%d", i, packs, ret);
 		offset += ret;
-		sum += calc_checksum(p, ret);
+		len = calc_checksum(p, ret);		//sub pack checksum
+		if(len!=pack_checksum)
+		{
+			LOG_E("[DFU][sub-checksum]SRV=%d,MCU=%d", pack_checksum, len);
+			ret = -5;
+			goto cmd_firmware_update_2;
+		}
+		sum += len;
 
 //		memdump((uint8_t *)p, ret);
 		result = write(fd, p, ret);
 		if(result==-1)
 		{
 			LOG_E("[DFU]file write failed %d", errno);
-			goto cmd_firmware_update_2;			
+			goto cmd_firmware_update_2;
 		}
 		LOG_I("[DFU]Pack %d//%d written %d bytes to file", i, packs, result);
 	}
@@ -654,7 +666,7 @@ cmd_firmware_update_2:
 //----------------------------------------------------------------------------------------------
 	if(sum!=firmware_info.checksum)
 	{
-		LOG_E("[Y]Firmware Download Successful but checksum error\r\n");
+		LOG_E("[DFU][checksum]SRV=%d,MCU=%d", firmware_info.checksum, sum);
 		goto cmd_firmware_update_2;
 	}
 //----------------------------------------------------------------------------------------------
