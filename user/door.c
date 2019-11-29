@@ -15,6 +15,7 @@
 #include "led.h"
 #include "relay.h"
 #include <netdev.h>
+#include <dfs_posix.h>
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -42,6 +43,7 @@ extern int app_ec200t_start(void);
 #define MAX_VERSION_STR_LEN		16
 
 #define FIRMWARE_PACK_SIZE		512
+#define FIRMWARE_FILE_NAME		"/FW.BIN"
 
 door_info_t door_info;
 int socket_tcp = -1;
@@ -112,6 +114,7 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 extern void door_init(void)
 {
 	app_ec200t_start();
+
 	while(1)
 	{
 		LOG_D("[Y]EC200T linking...");
@@ -534,6 +537,8 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	uint32_t sum = 0;
 	char *p,*p1;
 	char version[MAX_VERSION_STR_LEN];
+	int fd = -1;
+	int result;
 
 	LOG_D("cmd_firmware_update[%d]\r\n", size);
 
@@ -563,7 +568,14 @@ static void cmd_firmware_update(const char *data, rt_size_t size)
 	LOG_I("DFU[%6s][sum=0x%08X][size=%d]\r\n", p, firmware_info.checksum, firmware_info.size );
 
 	packs = firmware_info.size / FIRMWARE_PACK_SIZE;
-
+//----------------------------------------------------------------------------------------------
+	fd = open(FIRMWARE_FILE_NAME, O_CREAT|O_WRONLY|O_TRUNC);
+	if (fd < 0)
+	{
+		LOG_E("open file for write failed\n");
+		goto cmd_firmware_update_2;
+	}
+//----------------------------------------------------------------------------------------------
 	for(i=0; i<packs; i++)
 	{
 		LOG_D("[Y]Request Firmware Pack %d of %d, size=%d", i+1, packs, FIRMWARE_PACK_SIZE);
@@ -588,6 +600,9 @@ cmd_firmware_update_1:
 //----------------------------------------------------------------------------------------------
 		LOG_D("[SERVER->MCU][%d]: %.*s", ret, ret, buf);
 
+		rt_memcpy(session, resp_get_field((char *)buf, ret, 1), SESSION_ID_LEN);
+		session[SESSION_ID_LEN] = 0;
+
 		//base64 decode
 		p = (char *)resp_get_field((char *)buf, ret, 3);	//get base64 data field
 		if(p==RT_NULL)										//illeagal data structure
@@ -605,11 +620,18 @@ cmd_firmware_update_1:
 			goto cmd_firmware_update_2;			
 		}
 
-		LOG_I("[Y]Firmware Pack %d of %d, size=%d\r\n", i, packs, ret);
+		LOG_I("[Y]Firmware Pack %d of %d, size=%d", i, packs, ret);
 		offset += ret;
 		sum += calc_checksum(p, ret);
 
-		memdump((uint8_t *)p, ret);
+//		memdump((uint8_t *)p, ret);
+		result = write(fd, p, ret);
+		if(result==-1)
+		{
+			LOG_E("[DFU]file write failed %d", errno);
+			goto cmd_firmware_update_2;			
+		}
+		LOG_I("[DFU]Pack %d//%d written %d bytes to file", i, packs, result);
 	}
 //----------------------------------------------------------------------------------------------
 	if(i<packs)							//recieve timeout
@@ -619,6 +641,7 @@ cmd_firmware_update_2:
 		len = rt_sprintf(buf, "ERR:%s\n", session);
 		tcp_write(socket_tcp, (uint8_t *)buf, len);
 		rt_free(buf);
+		if(fd>=0)close(fd);
 		return;
 	}
 //----------------------------------------------------------------------------------------------
@@ -642,5 +665,6 @@ cmd_firmware_update_2:
 
 cmd_firmware_update_0:
 	rt_free(buf);
+	close(fd);
 }
 //************************************************************************************************************
