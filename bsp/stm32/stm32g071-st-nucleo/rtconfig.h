@@ -49,7 +49,7 @@
 #define RT_USING_COMPONENTS_INIT
 #define RT_USING_USER_MAIN
 #define RT_MAIN_THREAD_STACK_SIZE 2048
-#define RT_MAIN_THREAD_PRIORITY 10
+#define RT_MAIN_THREAD_PRIORITY 27
 
 /* C++ features */
 
@@ -167,6 +167,7 @@
 /* Wiced WiFi */
 
 #define PKG_USING_AT_DEVICE
+#define PKG_AT_INIT_BY_THREAD
 #define AT_DEVICE_EC20
 #define AT_DEVICE_SOCKETS_NUM 12
 #define AT_DEVICE_NAME "uart1"

@@ -1806,6 +1806,11 @@ static int at_socket_device_init(void)
 
     return RT_EOK;
 }
-INIT_APP_EXPORT(at_socket_device_init);
+//INIT_APP_EXPORT(at_socket_device_init);
 
+//by yangwensen@20191129
+extern int app_ec200t_start(void)
+{
+	return at_socket_device_init();
+}
 #endif /* AT_DEVICE_EC20 */

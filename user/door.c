@@ -14,6 +14,7 @@
 
 #include "led.h"
 #include "relay.h"
+#include <netdev.h>
 //************************************************************************************************************
 static void urc_func(const char *data, rt_size_t size);
 static void create_door_server_process(void);
@@ -30,6 +31,7 @@ static void cmd_volume(const char *data, rt_size_t size);
 static void cmd_firmware_update(const char *data, rt_size_t size);
 //************************************************************************************************************
 extern int base64_decode(char * buf, int len);
+extern int app_ec200t_start(void);
 //************************************************************************************************************
 #define BUFSZ   1024
 
@@ -109,6 +111,14 @@ static int tcp_write(int sock, uint8_t *buff, uint32_t len)
 //by yangwensen@20191112
 extern void door_init(void)
 {
+	app_ec200t_start();
+	while(1)
+	{
+		LOG_D("[Y]EC200T linking...");
+		if( netdev_is_link_up(netdev_get_by_name("ec20")) )break;
+        rt_thread_mdelay(1000);
+	}
+
 //	rt_memset(&door_info, 0, sizeof(door_info));
 	
 //	rt_memcpy(door_info.IMEI, "863412045887166", sizeof(door_info.IMEI)-1);
