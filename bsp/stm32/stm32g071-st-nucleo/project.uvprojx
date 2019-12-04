@@ -529,6 +529,11 @@
               <FileType>1</FileType>
               <FilePath>.\drivers\drv_spi_flash.c</FilePath>
             </File>
+            <File>
+              <FileName>drv_dac_sound.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\drivers\drv_dac_sound.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
