@@ -103,6 +103,9 @@
 #define RT_SFUD_USING_SFDP
 #define RT_SFUD_USING_FLASH_INFO_TABLE
 #define RT_USING_AUDIO
+#define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
+#define RT_AUDIO_REPLAY_MP_BLOCK_COUNT 2
+#define RT_AUDIO_RECORD_PIPE_SIZE 2048
 
 /* Using WiFi */
 
@@ -190,6 +193,10 @@
 
 /* multimedia packages */
 
+#define PKG_USING_WAVPLAYER
+#define PKG_WP_USING_PLAY
+#define PKG_WP_PLAY_DEVICE "sound0"
+#define PKG_USING_WAVPLAYER_LATEST_VERSION
 
 /* tools packages */
 
@@ -202,6 +209,8 @@
 
 /* miscellaneous packages */
 
+#define PKG_USING_OPTPARSE
+#define PKG_USING_OPTPARSE_V100
 
 /* samples: kernel and components samples */
 
