@@ -13,7 +13,7 @@
 #define DBG_COLOR
 #include <rtdbg.h>
 
-#define TX_DMA_FIFO_SIZE (2048)
+#define TX_DMA_FIFO_SIZE (1024)
 
 struct temp_sound
 {
@@ -21,26 +21,154 @@ struct temp_sound
     struct rt_audio_configure replay_config;
     int volume;
     rt_uint8_t *tx_fifo;
+    int endflag;
 };
 
 static rt_err_t getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps)
 {
+	rt_err_t ret = RT_EOK;
     struct temp_sound *sound = RT_NULL;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
-    return RT_EOK; 
+    switch(caps->main_type)
+    {
+		case AUDIO_TYPE_QUERY:
+		{
+			switch (caps->sub_type)
+			{
+			case AUDIO_TYPE_QUERY:
+				caps->udata.mask = AUDIO_TYPE_OUTPUT | AUDIO_TYPE_MIXER;
+				break;
+
+			default:
+				ret = -RT_ERROR;
+				break;
+			}
+
+			break;
+		}
+
+		case AUDIO_TYPE_OUTPUT:
+		{
+			switch(caps->sub_type)
+			{
+			case AUDIO_DSP_PARAM:
+				caps->udata.config.channels   = sound->replay_config.channels;
+				caps->udata.config.samplebits = sound->replay_config.samplebits;
+				caps->udata.config.samplerate = sound->replay_config.samplerate;
+				break;
+
+			default:
+				ret = -RT_ERROR;
+				break;
+			}
+
+			break;
+		}
+
+		case AUDIO_TYPE_MIXER:
+		{
+			switch (caps->sub_type)
+			{
+			case AUDIO_MIXER_QUERY:
+				caps->udata.mask = AUDIO_MIXER_VOLUME | AUDIO_MIXER_LINE;
+				break;
+
+			case AUDIO_MIXER_VOLUME:
+				caps->udata.value = sound->volume;
+				break;
+
+			case AUDIO_MIXER_LINE:
+				break;
+
+			default:
+				ret = -RT_ERROR;
+				break;
+			}
+
+			break;
+		}
+
+		default:
+			ret = -RT_ERROR;
+			break;
+    }
+
+    return ret; 
 }
 
 static rt_err_t configure(struct rt_audio_device *audio, struct rt_audio_caps *caps)
 {
+	rt_err_t ret = RT_EOK;
     struct temp_sound *sound = RT_NULL;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
-    return RT_EOK; 
+    switch(caps->main_type)
+    {
+		case AUDIO_TYPE_MIXER:
+		{
+			switch(caps->sub_type)
+			{
+			case AUDIO_MIXER_VOLUME:
+			{
+				int volume = caps->udata.value;
+				sound->volume = volume;
+				break;
+			}
+
+			default:
+				ret = -RT_ERROR;
+				break;
+			}
+
+			break;
+		}
+
+		case AUDIO_TYPE_OUTPUT:
+		{
+			switch(caps->sub_type)
+			{
+			case AUDIO_DSP_PARAM:
+			{
+				int samplerate;
+
+				samplerate = caps->udata.config.samplerate;
+				sound->replay_config.samplerate = samplerate;
+				LOG_I("set samplerate = %d", samplerate);
+				break;
+			}
+
+			case AUDIO_DSP_SAMPLERATE:
+			{
+				int samplerate;
+
+				samplerate = caps->udata.config.samplerate;
+				sound->replay_config.samplerate = samplerate;
+				LOG_I("set samplerate = %d", samplerate);
+				break;
+			}
+
+			case AUDIO_DSP_CHANNELS:
+			{
+				break;
+			}
+
+			default:
+				break;
+			}
+
+			break;
+		}
+
+		default:
+			break;
+    }
+
+    return ret;
 }
 
 static rt_err_t init(struct rt_audio_device *audio)
@@ -69,6 +197,9 @@ static rt_err_t stop(struct rt_audio_device *audio, int stream)
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;    
+
+    LOG_I("sound stop");  
+    sound->endflag = 1;
 
     return RT_EOK;
 }
@@ -127,6 +258,15 @@ static int rt_hw_sound_init(void)
     }
 
     sound.tx_fifo = tx_fifo;
+
+    /* 配置 DSP 参数 */
+    {
+        sound.replay_config.samplerate = 44100;
+        sound.replay_config.channels   = 1;
+        sound.replay_config.samplebits = 8;
+        sound.volume                   = 60;
+        sound.endflag                  = 0;
+    }
 
     /* 注册声卡放音驱动 */
     sound.device.ops = &ops;
