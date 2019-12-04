@@ -3,5 +3,15 @@
   "path": "/packages/iot/at_device", 
   "ver": "v1.6.0", 
   "name": "AT_DEVICE"
+ }, 
+ {
+  "path": "/packages/multimedia/wavplayer", 
+  "ver": "latest", 
+  "name": "WAVPLAYER"
+ }, 
+ {
+  "path": "/packages/misc/optparse", 
+  "ver": "v1.0.0", 
+  "name": "OPTPARSE"
  }
 ]
