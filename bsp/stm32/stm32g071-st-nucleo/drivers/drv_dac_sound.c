@@ -21,9 +21,33 @@ struct temp_sound
     struct rt_audio_configure replay_config;
     int volume;
     rt_uint8_t *tx_fifo;
+
+	struct rt_thread thread;
     int endflag;
 };
 
+
+//by yangwensen
+extern void memdump(uint8_t *buff, uint16_t len);
+
+static void virtualplay(void *p)
+{
+    struct temp_sound *sound = (struct temp_sound *)p; (void)sound;
+
+    while(1)
+    {
+        /* tick = TX_DMA_FIFO_SIZE/2 * 1000ms / 44100 / 4 ≈ 5.8 */
+        rt_thread_mdelay(100);
+        rt_audio_tx_complete(&sound->device);
+
+        if(sound->endflag == 1)
+        {
+            break;
+        }
+    }
+}
+
+static int thread_stack[512] = {0};
 static rt_err_t getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps)
 {
 	rt_err_t ret = RT_EOK;
@@ -190,11 +214,22 @@ static rt_err_t init(struct rt_audio_device *audio)
 static rt_err_t start(struct rt_audio_device *audio, int stream)
 {
     struct temp_sound *sound = RT_NULL;
+	rt_err_t ret = RT_EOK;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
     LOG_I("sound start");  
+	//start dma
+    ret = rt_thread_init(&sound->thread, "virtual", virtualplay, sound, &thread_stack, sizeof(thread_stack), 1, 10);
+    if(ret != RT_EOK)
+    {
+        LOG_E("virtual play thread init failed");
+        return (-RT_ERROR);
+    }
+    rt_thread_startup(&sound->thread);
+
+    sound->endflag = 0;
 
     return RT_EOK;
 }
@@ -215,11 +250,15 @@ static rt_err_t stop(struct rt_audio_device *audio, int stream)
 rt_size_t transmit(struct rt_audio_device *audio, const void *writeBuf, void *readBuf, rt_size_t size)
 {
     struct temp_sound *sound = RT_NULL;
+	static uint32_t cnt = 0;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
     LOG_I("sound transmit"); 
+
+	rt_kprintf("WAV_PACK[%d]", cnt++);
+	memdump((uint8_t *)writeBuf, size);
 
     return size; 
 }
@@ -281,6 +320,8 @@ static int rt_hw_sound_init(void)
     /* 注册声卡放音驱动 */
     sound.device.ops = &ops;
     rt_audio_register(&sound.device, "sound0", RT_DEVICE_FLAG_WRONLY, &sound);
+
+	LOG_I("sound init");
 
     return RT_EOK; 
 }
