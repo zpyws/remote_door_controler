@@ -26,7 +26,7 @@ int main(void)
         rt_kprintf("spi flash mount to / failed!\n");
     }
 
-	door_init();
+//	door_init();
 
     while (1)
     {

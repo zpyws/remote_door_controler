@@ -193,10 +193,6 @@
 
 /* multimedia packages */
 
-#define PKG_USING_WAVPLAYER
-#define PKG_WP_USING_PLAY
-#define PKG_WP_PLAY_DEVICE "sound0"
-#define PKG_USING_WAVPLAYER_LATEST_VERSION
 
 /* tools packages */
 

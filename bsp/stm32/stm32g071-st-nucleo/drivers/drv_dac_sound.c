@@ -32,6 +32,8 @@ static rt_err_t getcaps(struct rt_audio_device *audio, struct rt_audio_caps *cap
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
+    LOG_I("sound configure"); 
+
     switch(caps->main_type)
     {
 		case AUDIO_TYPE_QUERY:
@@ -107,6 +109,8 @@ static rt_err_t configure(struct rt_audio_device *audio, struct rt_audio_caps *c
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
+    LOG_I("sound configure"); 
+
     switch(caps->main_type)
     {
 		case AUDIO_TYPE_MIXER:
@@ -178,6 +182,8 @@ static rt_err_t init(struct rt_audio_device *audio)
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
+    LOG_I("sound init"); 
+ 
     return RT_EOK; 
 }
 
@@ -187,6 +193,8 @@ static rt_err_t start(struct rt_audio_device *audio, int stream)
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
+
+    LOG_I("sound start");  
 
     return RT_EOK;
 }
@@ -210,6 +218,8 @@ rt_size_t transmit(struct rt_audio_device *audio, const void *writeBuf, void *re
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
+
+    LOG_I("sound transmit"); 
 
     return size; 
 }
