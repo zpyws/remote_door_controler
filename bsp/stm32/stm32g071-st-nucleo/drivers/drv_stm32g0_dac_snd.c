@@ -3,7 +3,7 @@
 //************************************************************************************************************
 TIM_HandleTypeDef htim6;
 DAC_HandleTypeDef hdac1;
-DMA_HandleTypeDef hdma1;
+DMA_HandleTypeDef hdma_dac1_ch1;
 //************************************************************************************************************
 /**
   * @brief GPIO Initialization Function
@@ -127,7 +127,7 @@ extern int8_t stm32g0_dac_snd_start(void)
 extern int8_t stm32g0_dac_snd_stop(void)
 {
 	HAL_TIM_Base_Stop(&htim6);
-	HAL_DMA_Abort(&hdma1);
+	HAL_DMA_Abort(&hdma_dac1_ch1);
 
 	return 0;
 }
@@ -135,11 +135,18 @@ extern int8_t stm32g0_dac_snd_stop(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len)
 {
-	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len, DAC_ALIGN_8B_R) != HAL_OK)
+const uint8_t aEscalator8bit[6] = {0x0, 0x33, 0x66, 0x99, 0xCC, 0xFF};
+  if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)aEscalator8bit, 6, DAC_ALIGN_8B_R) != HAL_OK)
+//	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len, DAC_ALIGN_8B_R) != HAL_OK)
 	{
 		return -1;
 	}
 
 	return 0;
+}
+//************************************************************************************************************
+void DMA1_Channel2_3_IRQHandler(void)
+{
+	HAL_DMA_IRQHandler(&hdma_dac1_ch1);
 }
 //************************************************************************************************************
