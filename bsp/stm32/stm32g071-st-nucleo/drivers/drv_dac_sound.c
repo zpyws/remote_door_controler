@@ -26,10 +26,15 @@ struct temp_sound
     int endflag;
 };
 
-
+//************************************************************************************************************
 //by yangwensen
 extern void memdump(uint8_t *buff, uint16_t len);
-
+extern int8_t stm32g0_dac_snd_init(void);
+extern int8_t stm32g0_dac_snd_start(void);
+extern int8_t stm32g0_dac_snd_stop(void);
+extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len);
+//************************************************************************************************************
+#if 0
 static void virtualplay(void *p)
 {
     struct temp_sound *sound = (struct temp_sound *)p; (void)sound;
@@ -48,6 +53,8 @@ static void virtualplay(void *p)
 }
 
 static int thread_stack[512] = {0};
+#endif
+
 static rt_err_t getcaps(struct rt_audio_device *audio, struct rt_audio_caps *caps)
 {
 	rt_err_t ret = RT_EOK;
@@ -206,7 +213,8 @@ static rt_err_t init(struct rt_audio_device *audio)
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
-    LOG_I("sound init"); 
+    LOG_I("sound init");
+	stm32g0_dac_snd_init();
  
     return RT_EOK; 
 }
@@ -214,13 +222,15 @@ static rt_err_t init(struct rt_audio_device *audio)
 static rt_err_t start(struct rt_audio_device *audio, int stream)
 {
     struct temp_sound *sound = RT_NULL;
-	rt_err_t ret = RT_EOK;
+//	rt_err_t ret = RT_EOK;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
-    LOG_I("sound start");  
-	//start dma
+    LOG_I("sound start");
+	stm32g0_dac_snd_start();
+	rt_audio_tx_complete(&sound->device);
+#if 0
     ret = rt_thread_init(&sound->thread, "virtual", virtualplay, sound, &thread_stack, sizeof(thread_stack), 1, 10);
     if(ret != RT_EOK)
     {
@@ -230,7 +240,7 @@ static rt_err_t start(struct rt_audio_device *audio, int stream)
     rt_thread_startup(&sound->thread);
 
     sound->endflag = 0;
-
+#endif
     return RT_EOK;
 }
 
@@ -241,8 +251,9 @@ static rt_err_t stop(struct rt_audio_device *audio, int stream)
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;    
 
-    LOG_I("sound stop");  
-    sound->endflag = 1;
+    LOG_I("sound stop");
+	stm32g0_dac_snd_stop();
+//    sound->endflag = 1;
 
     return RT_EOK;
 }
@@ -250,15 +261,17 @@ static rt_err_t stop(struct rt_audio_device *audio, int stream)
 rt_size_t transmit(struct rt_audio_device *audio, const void *writeBuf, void *readBuf, rt_size_t size)
 {
     struct temp_sound *sound = RT_NULL;
-	static uint32_t cnt = 0;
+//	static uint32_t cnt = 0;
 
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
     LOG_I("sound transmit"); 
-
+#if 0
 	rt_kprintf("WAV_PACK[%d]", cnt++);
 	memdump((uint8_t *)writeBuf, size);
+#endif
+	stm32g0_dac_snd_transfer((uint8_t *)writeBuf, size);
 
     return size; 
 }

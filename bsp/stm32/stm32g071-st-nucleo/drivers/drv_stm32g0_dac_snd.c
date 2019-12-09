@@ -3,6 +3,7 @@
 //************************************************************************************************************
 TIM_HandleTypeDef htim6;
 DAC_HandleTypeDef hdac1;
+DMA_HandleTypeDef hdma1;
 //************************************************************************************************************
 /**
   * @brief GPIO Initialization Function
@@ -97,12 +98,47 @@ static void MX_DAC1_Init(void)
   }
 }
 //************************************************************************************************************
+//by yangwensen@20191206
 extern int8_t stm32g0_dac_snd_init(void)
 {
 	MX_GPIO_Init();
     MX_DMA_Init();
 	MX_DAC1_Init();
 	MX_TIM6_Init();
+
+	return 0;
+}
+//************************************************************************************************************
+//by yangwensen@20191209
+extern int8_t stm32g0_dac_snd_start(void)
+{
+	if (HAL_DAC_Init(&hdac1) != HAL_OK)
+	{
+		return -1;
+	}
+
+	/* Enable TIM peripheral counter */
+	HAL_TIM_Base_Start(&htim6);
+
+	return 0;
+}
+//************************************************************************************************************
+//by yangwensen@20191209
+extern int8_t stm32g0_dac_snd_stop(void)
+{
+	HAL_TIM_Base_Stop(&htim6);
+	HAL_DMA_Abort(&hdma1);
+
+	return 0;
+}
+//************************************************************************************************************
+//by yangwensen@20191209
+extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len)
+{
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len, DAC_ALIGN_8B_R) != HAL_OK)
+	{
+		return -1;
+	}
 
 	return 0;
 }
