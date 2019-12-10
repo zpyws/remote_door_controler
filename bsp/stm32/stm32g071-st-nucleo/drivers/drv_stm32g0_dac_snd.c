@@ -112,18 +112,17 @@ extern int8_t stm32g0_dac_snd_init(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_start(void)
 {
-	const uint8_t aEscalator8bit[6] = {0x0, 0x33, 0x66, 0x99, 0xCC, 0xFF};
-	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
+//	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
 	const uint16_t wave16[9] = {0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095};
  
 #if 0
-#endif
 	HAL_DAC_DeInit(&hdac1);
 
 	if (HAL_DAC_Init(&hdac1) != HAL_OK)
 	{
 		return -1;
 	}
+#endif
 
 	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave16, 9, DAC_ALIGN_12B_R) != HAL_OK)
 //	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave8, 5, DAC_ALIGN_8B_R) != HAL_OK)

@@ -188,7 +188,7 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     PA4     ------> DAC1_OUT1
     PA5     ------> DAC1_OUT2 
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -202,9 +202,9 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     hdma_dac1_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_dac1_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_dac1_ch1.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_dac1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_dac1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_dac1_ch1.Init.Mode = DMA_CIRCULAR;
+    hdma_dac1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_dac1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_dac1_ch1.Init.Mode = DMA_NORMAL;
     hdma_dac1_ch1.Init.Priority = DMA_PRIORITY_LOW;
     if (HAL_DMA_Init(&hdma_dac1_ch1) != HAL_OK)
     {
