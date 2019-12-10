@@ -80,8 +80,12 @@ int wavplay_sample(int argc, char **argv)
         goto __exit;
 
     rt_kprintf("wav information:\n");
-    rt_kprintf("samplerate %d\n", info->fmt_block.wav_format.SamplesPerSec);
     rt_kprintf("channel %d\n", info->fmt_block.wav_format.Channels);
+    rt_kprintf("samplerate %d\n", info->fmt_block.wav_format.SamplesPerSec);
+    rt_kprintf("ByteRate %d\n", info->fmt_block.wav_format.AvgBytesPerSec);
+    rt_kprintf("BlockAlign %d\n", info->fmt_block.wav_format.BlockAlign);
+    rt_kprintf("BitsPerSample %d\n", info->fmt_block.wav_format.BitsPerSample);
+    rt_kprintf("DataSize %d\n", info->data_block.data_size);
 
     /* 根据设备名称查找 Audio 设备，获取设备句柄 */
     snd_dev = rt_device_find(SOUND_DEVICE_NAME);
