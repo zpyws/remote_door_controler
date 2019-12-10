@@ -33,6 +33,7 @@ extern int8_t stm32g0_dac_snd_init(void);
 extern int8_t stm32g0_dac_snd_start(void);
 extern int8_t stm32g0_dac_snd_stop(void);
 extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len);
+extern void stm32g0_dac_snd_samplerate_set(uint32_t samplerate);
 //************************************************************************************************************
 #if 0
 static void virtualplay(void *p)
@@ -174,6 +175,7 @@ static rt_err_t configure(struct rt_audio_device *audio, struct rt_audio_caps *c
 				samplerate = caps->udata.config.samplerate;
 				sound->replay_config.samplerate = samplerate;
 				LOG_I("set samplerate = %d", samplerate);
+				stm32g0_dac_snd_samplerate_set(samplerate);
 				break;
 			}
 
@@ -229,7 +231,7 @@ static rt_err_t start(struct rt_audio_device *audio, int stream)
 
     LOG_I("sound start");
 	stm32g0_dac_snd_start();
-	rt_audio_tx_complete(&sound->device);
+//	rt_audio_tx_complete(&sound->device);
 #if 0
     ret = rt_thread_init(&sound->thread, "virtual", virtualplay, sound, &thread_stack, sizeof(thread_stack), 1, 10);
     if(ret != RT_EOK)

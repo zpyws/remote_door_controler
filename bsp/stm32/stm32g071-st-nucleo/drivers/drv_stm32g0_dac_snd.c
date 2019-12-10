@@ -37,7 +37,7 @@ static void MX_DMA_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM6_Init(void)
+static void MX_TIM6_Init(uint32_t period)
 {
 
   /* USER CODE BEGIN TIM6_Init 0 */
@@ -52,7 +52,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 0;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 0x7ff;
+  htim6.Init.Period = period;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -104,7 +104,7 @@ extern int8_t stm32g0_dac_snd_init(void)
 	MX_GPIO_Init();
     MX_DMA_Init();
 	MX_DAC1_Init();
-	MX_TIM6_Init();
+//	MX_TIM6_Init();
 
 	return 0;
 }
@@ -112,9 +112,23 @@ extern int8_t stm32g0_dac_snd_init(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_start(void)
 {
+	const uint8_t aEscalator8bit[6] = {0x0, 0x33, 0x66, 0x99, 0xCC, 0xFF};
+	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
+	const uint16_t wave16[9] = {0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095};
+ 
+#if 0
+#endif
+	HAL_DAC_DeInit(&hdac1);
+
 	if (HAL_DAC_Init(&hdac1) != HAL_OK)
 	{
 		return -1;
+	}
+
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave16, 9, DAC_ALIGN_12B_R) != HAL_OK)
+//	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave8, 5, DAC_ALIGN_8B_R) != HAL_OK)
+	{
+		return -2;
 	}
 
 	/* Enable TIM peripheral counter */
@@ -135,11 +149,9 @@ extern int8_t stm32g0_dac_snd_stop(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len)
 {
-const uint8_t aEscalator8bit[6] = {0x0, 0x33, 0x66, 0x99, 0xCC, 0xFF};
-  if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)aEscalator8bit, 6, DAC_ALIGN_8B_R) != HAL_OK)
 //	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len, DAC_ALIGN_8B_R) != HAL_OK)
 	{
-		return -1;
+//		return -1;
 	}
 
 	return 0;
@@ -148,5 +160,12 @@ const uint8_t aEscalator8bit[6] = {0x0, 0x33, 0x66, 0x99, 0xCC, 0xFF};
 void DMA1_Channel2_3_IRQHandler(void)
 {
 	HAL_DMA_IRQHandler(&hdma_dac1_ch1);
+}
+//************************************************************************************************************
+//by yanwensen@20191210
+extern void stm32g0_dac_snd_samplerate_set(uint32_t samplerate)
+{
+	HAL_TIM_Base_DeInit(&htim6);
+	MX_TIM6_Init(64000000UL/samplerate);
 }
 //************************************************************************************************************
