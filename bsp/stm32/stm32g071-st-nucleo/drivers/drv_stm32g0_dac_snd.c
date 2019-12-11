@@ -2,12 +2,19 @@
 #include "stm32g0xx_hal.h"
 #include "drivers/audio.h"
 //************************************************************************************************************
+#define AUDIO_PA_PIN			6
+
+#define AUDIO_PA_ON()			rt_pin_write(AUDIO_PA_PIN, PIN_LOW)
+#define AUDIO_PA_OFF()			rt_pin_write(AUDIO_PA_PIN, PIN_HIGH)
+//************************************************************************************************************
 TIM_HandleTypeDef htim6;
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 //************************************************************************************************************
 static struct rt_audio_device *current_audio_device = NULL;
 static const uint32_t wave32[] = {0, 256*16, 512*16, 1024*16, 1536*16, 2048*16, 2560*16, 3072*16, 3584*16, 4095*16};
+//	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
+//	const uint16_t wave16[9] = {0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095};
 //************************************************************************************************************
 /**
   * @brief GPIO Initialization Function
@@ -16,10 +23,11 @@ static const uint32_t wave32[] = {0, 256*16, 512*16, 1024*16, 1536*16, 2048*16, 
   */
 static void MX_GPIO_Init(void)
 {
-
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
+	rt_pin_mode(AUDIO_PA_PIN, PIN_MODE_OUTPUT);
+	AUDIO_PA_OFF();
 }
 //************************************************************************************************************
 /** 
@@ -116,10 +124,7 @@ extern int8_t stm32g0_dac_snd_init(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_start(uint32_t *fifo, uint32_t samples)
 {
-//	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
-//	const uint16_t wave16[9] = {0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095};
-//	const uint32_t wave32[9] = {0, 512*16, 1024*16, 1536*16, 2048*16, 2560*16, 3072*16, 3584*16, 4095*16};
- 
+	AUDIO_PA_ON();
 #if 0
 	HAL_DAC_DeInit(&hdac1);
 
@@ -147,7 +152,7 @@ extern int8_t stm32g0_dac_snd_stop(void)
 {
 	HAL_TIM_Base_Stop(&htim6);
 	HAL_DMA_Abort(&hdma_dac1_ch1);
-
+	AUDIO_PA_OFF();
 	return 0;
 }
 //************************************************************************************************************
