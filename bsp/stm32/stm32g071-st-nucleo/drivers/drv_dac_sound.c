@@ -30,9 +30,9 @@ struct temp_sound
 //by yangwensen
 extern void memdump(uint8_t *buff, uint16_t len);
 extern int8_t stm32g0_dac_snd_init(void);
-extern int8_t stm32g0_dac_snd_start(void);
+extern int8_t stm32g0_dac_snd_start(uint32_t *fifo, uint32_t samples);
 extern int8_t stm32g0_dac_snd_stop(void);
-extern int8_t stm32g0_dac_snd_transfer(uint8_t *dat, uint32_t len);
+extern int8_t stm32g0_dac_snd_transfer(struct rt_audio_device *device, uint8_t *dat, uint32_t len);
 extern void stm32g0_dac_snd_samplerate_set(uint32_t samplerate);
 //************************************************************************************************************
 #if 0
@@ -230,8 +230,8 @@ static rt_err_t start(struct rt_audio_device *audio, int stream)
     sound = (struct temp_sound *)audio->parent.user_data;
 
     LOG_I("sound start");
-	stm32g0_dac_snd_start();
-//	rt_audio_tx_complete(&sound->device);
+	stm32g0_dac_snd_start((uint32_t *)(sound->tx_fifo), TX_DMA_FIFO_SIZE>>2);
+	rt_audio_tx_complete(&sound->device);
 #if 0
     ret = rt_thread_init(&sound->thread, "virtual", virtualplay, sound, &thread_stack, sizeof(thread_stack), 1, 10);
     if(ret != RT_EOK)
@@ -273,7 +273,8 @@ rt_size_t transmit(struct rt_audio_device *audio, const void *writeBuf, void *re
 	rt_kprintf("WAV_PACK[%d]", cnt++);
 	memdump((uint8_t *)writeBuf, size);
 #endif
-	stm32g0_dac_snd_transfer((uint8_t *)writeBuf, size);
+	LOG_I("PING = 0x%08x", (uint32_t)(writeBuf));
+	stm32g0_dac_snd_transfer(&sound->device, (uint8_t *)writeBuf, size);
 
     return size; 
 }
@@ -322,6 +323,7 @@ static int rt_hw_sound_init(void)
     }
 
     sound.tx_fifo = tx_fifo;
+	LOG_I("sound tx_fifo = 0x%08x", (uint32_t)(sound.tx_fifo));
 
     /* 配置 DSP 参数 */
     {
