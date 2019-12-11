@@ -159,9 +159,24 @@ extern int8_t stm32g0_dac_snd_stop(void)
 //by yangwensen@20191209
 extern int8_t stm32g0_dac_snd_transfer(struct rt_audio_device *device, uint8_t *dat, uint32_t len)
 {
-	static uint32_t cnt = 0;
-	rt_kprintf("WAV_PACK[%d]", cnt++);
-	memdump(dat, len);
+//	static uint32_t cnt = 0;
+//	rt_kprintf("WAV_PACK[%d]", cnt++);
+//	memdump(dat, len);
+#if 0
+	uint32_t i;
+	uint32_t point;
+	uint32_t *p;
+
+	point = 10;
+	len = point*4;
+	p = (uint32_t *)dat;
+	for(i=0; i<point; i++)
+	{
+		p[i] = (i*(4096/point)) << 16;
+	}
+#endif
+	len = sizeof(wave32);
+	rt_memcpy(dat, wave32, len);
 
 	rt_hw_led_tog(0);
 	current_audio_device = device;
