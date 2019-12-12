@@ -268,12 +268,11 @@ rt_size_t transmit(struct rt_audio_device *audio, const void *writeBuf, void *re
     RT_ASSERT(audio != RT_NULL); 
     sound = (struct temp_sound *)audio->parent.user_data;
 
-    LOG_I("sound transmit"); 
+//    LOG_I("sound transmit"); 
 #if 0
 	rt_kprintf("WAV_PACK[%d]", cnt++);
 	memdump((uint8_t *)writeBuf, size);
 #endif
-	LOG_I("PING = 0x%08x", (uint32_t)(writeBuf));
 	stm32g0_dac_snd_transfer(&sound->device, (uint8_t *)writeBuf, size);
 
     return size; 
@@ -323,7 +322,6 @@ static int rt_hw_sound_init(void)
     }
 
     sound.tx_fifo = tx_fifo;
-	LOG_I("sound tx_fifo = 0x%08x", (uint32_t)(sound.tx_fifo));
 
     /* 配置 DSP 参数 */
     {
