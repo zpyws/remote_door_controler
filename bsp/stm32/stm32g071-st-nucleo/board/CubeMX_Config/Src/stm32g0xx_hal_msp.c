@@ -192,7 +192,7 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
+#if 0
     /* DAC1 DMA Init */
     /* DAC1_CH1 Init */
 	extern DMA_HandleTypeDef hdma_dac1_ch1;
@@ -212,7 +212,7 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     }
 
     __HAL_LINKDMA(hdac,DMA_Handle1,hdma_dac1_ch1);
-
+#endif
   /* USER CODE BEGIN DAC1_MspInit 1 */
 
   /* USER CODE END DAC1_MspInit 1 */

@@ -11,6 +11,14 @@ TIM_HandleTypeDef htim6;
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 //************************************************************************************************************
+struct temp_sound
+{
+    struct rt_audio_device device; 
+    struct rt_audio_configure replay_config;
+    int volume;
+    rt_uint8_t *tx_fifo;
+};
+//************************************************************************************************************
 static struct rt_audio_device *current_audio_device = NULL;
 static const uint32_t wave32[] = {0, 256*16, 512*16, 1024*16, 1536*16, 2048*16, 2560*16, 3072*16, 3584*16, 4095*16};
 //	const uint8_t wave8[9] = {0, 64, 128, 192, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -147,6 +155,28 @@ static void MX_DAC1_Init(void)
   }
 }
 //************************************************************************************************************
+//by yangwensen@20191231
+extern int8_t stm32g0_dac_dma_config(uint32_t memaln, uint32_t dacaln)
+{
+    hdma_dac1_ch1.Instance = DMA1_Channel3;
+    hdma_dac1_ch1.Init.Request = DMA_REQUEST_DAC1_CHANNEL1;
+    hdma_dac1_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_dac1_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_dac1_ch1.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_dac1_ch1.Init.PeriphDataAlignment = dacaln;
+    hdma_dac1_ch1.Init.MemDataAlignment = memaln;
+    hdma_dac1_ch1.Init.Mode = DMA_NORMAL;
+    hdma_dac1_ch1.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    if (HAL_DMA_Init(&hdma_dac1_ch1) != HAL_OK)
+    {
+//      Error_Handler();
+    }
+
+    __HAL_LINKDMA(&hdac1,DMA_Handle1,hdma_dac1_ch1);
+
+	return 0;
+}
+//************************************************************************************************************
 //by yangwensen@20191206
 extern int8_t stm32g0_dac_snd_init(void)
 {
@@ -159,7 +189,7 @@ extern int8_t stm32g0_dac_snd_init(void)
 }
 //************************************************************************************************************
 //by yangwensen@20191209
-extern int8_t stm32g0_dac_snd_start(uint32_t *fifo, uint32_t samples)
+extern int8_t stm32g0_dac_snd_start(struct temp_sound *sound)
 {
 	AUDIO_PA_ON();
 #if 0
@@ -171,12 +201,10 @@ extern int8_t stm32g0_dac_snd_start(uint32_t *fifo, uint32_t samples)
 	}
 #endif
 
-//	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, fifo, samples, DAC_ALIGN_12B_L) != HAL_OK)
-//	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave16, 9, DAC_ALIGN_12B_R) != HAL_OK)
-//	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)wave8, 5, DAC_ALIGN_8B_R) != HAL_OK)
-	{
-//		return -2;
-	}
+	if(sound->replay_config.channels==1)
+		stm32g0_dac_dma_config(DMA_MDATAALIGN_HALFWORD, DMA_PDATAALIGN_BYTE);
+	else
+		stm32g0_dac_dma_config(DMA_MDATAALIGN_WORD, DMA_PDATAALIGN_BYTE);
 
 	/* Enable TIM peripheral counter */
 	HAL_TIM_Base_Start(&htim6);
@@ -194,36 +222,31 @@ extern int8_t stm32g0_dac_snd_stop(void)
 }
 //************************************************************************************************************
 //by yangwensen@20191209
-extern int8_t stm32g0_dac_snd_transfer(struct rt_audio_device *device, uint8_t *dat, uint32_t len)
+extern int8_t stm32g0_dac_snd_transfer(struct temp_sound *sound, uint8_t *dat, uint32_t len)
 {
 	uint32_t i;
 	uint32_t point;
-	uint32_t *p;
-#if 0
-	point = 128;
-	p = (uint32_t *)dat;
-	len = point*4;
+	uint16_t *p;
+	uint8_t ch;
+
+	ch = sound->replay_config.channels;
+
+	point = len >> ch;
+	p = (uint16_t *)dat;
 	for(i=0; i<point; i++)
 	{
-		p[i] = (i*(4096/point)) << 4;
-	}
-#else
-	point = len / 4;
-	p = (uint32_t *)dat;
-	for(i=0; i<point; i++)
-	{
-		p[i] &= 0x0000ffff;
-		if(p[i]&0x8000)
-			p[i] -= 0x8000;
+		if(*p & 0x8000)
+			*p -= 0x8000;
 		else
-			p[i] += 0x8000;
+			*p += 0x8000;
 
-		p[i] >>= 8;
+		*p >>= 8;
+
+		p += ch;
 	}
-#endif
 
-	current_audio_device = device;
-	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len/4, DAC_ALIGN_8B_R) != HAL_OK)
+	current_audio_device = &sound->device;
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_8B_R) != HAL_OK)
 	{
 //		return -1;
 	}
