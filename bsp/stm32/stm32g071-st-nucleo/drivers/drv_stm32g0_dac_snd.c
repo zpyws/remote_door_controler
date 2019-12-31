@@ -2,6 +2,7 @@
 #include "stm32g0xx_hal.h"
 #include "drivers/audio.h"
 //************************************************************************************************************
+#define DAC_BITS				12		//12 or 8bits only
 #define AUDIO_PA_PIN			6
 
 #define AUDIO_PA_ON()			rt_pin_write(AUDIO_PA_PIN, PIN_LOW)
@@ -201,10 +202,16 @@ extern int8_t stm32g0_dac_snd_start(struct temp_sound *sound)
 	}
 #endif
 
+#if(DAC_BITS==8)
+	#define DAC_DMA_ALN			DMA_PDATAALIGN_BYTE
+#else
+	#define DAC_DMA_ALN			DMA_PDATAALIGN_HALFWORD
+#endif
+
 	if(sound->replay_config.channels==1)
-		stm32g0_dac_dma_config(DMA_MDATAALIGN_HALFWORD, DMA_PDATAALIGN_BYTE);
+		stm32g0_dac_dma_config(DMA_MDATAALIGN_HALFWORD, DAC_DMA_ALN);
 	else
-		stm32g0_dac_dma_config(DMA_MDATAALIGN_WORD, DMA_PDATAALIGN_BYTE);
+		stm32g0_dac_dma_config(DMA_MDATAALIGN_WORD, DAC_DMA_ALN);
 
 	/* Enable TIM peripheral counter */
 	HAL_TIM_Base_Start(&htim6);
@@ -240,13 +247,17 @@ extern int8_t stm32g0_dac_snd_transfer(struct temp_sound *sound, uint8_t *dat, u
 		else
 			*p += 0x8000;
 
-		*p >>= 8;
+		*p >>= (16-DAC_BITS);
 
 		p += ch;
 	}
 
 	current_audio_device = &sound->device;
+#if(DAC_BITS==8)
 	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_8B_R) != HAL_OK)
+#else
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_12B_R) != HAL_OK)
+#endif
 	{
 //		return -1;
 	}
