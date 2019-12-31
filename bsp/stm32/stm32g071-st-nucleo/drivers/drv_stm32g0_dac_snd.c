@@ -212,19 +212,18 @@ extern int8_t stm32g0_dac_snd_transfer(struct rt_audio_device *device, uint8_t *
 	p = (uint32_t *)dat;
 	for(i=0; i<point; i++)
 	{
-//		if(i && (i&15)==15)rt_kprintf("\r\n");
-		p[i] >>= 4;
-		p[i] &= 0x00000fff;
-		if(p[i]<0x800)
-			p[i] += 0x800;
+		p[i] &= 0x0000ffff;
+		if(p[i]&0x8000)
+			p[i] -= 0x8000;
 		else
-			p[i] -= 0x800;
-//		rt_kprintf("%03X ", p[i]&0x00000ffful);
+			p[i] += 0x8000;
+
+		p[i] >>= 8;
 	}
 #endif
 
 	current_audio_device = device;
-	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len/4, DAC_ALIGN_12B_R) != HAL_OK)
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, len/4, DAC_ALIGN_8B_R) != HAL_OK)
 	{
 //		return -1;
 	}
