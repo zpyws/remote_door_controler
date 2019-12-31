@@ -2,7 +2,7 @@
 #include <rtdevice.h>
 #include <dfs_posix.h>
 
-#define BUFSZ   1024
+#define BUFSZ   1536
 #define SOUND_DEVICE_NAME    "sound0"    /* Audio 设备名称 */
 static rt_device_t snd_dev;              /* Audio 设备句柄 */
 
