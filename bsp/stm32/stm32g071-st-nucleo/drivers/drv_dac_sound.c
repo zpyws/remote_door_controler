@@ -171,10 +171,14 @@ static rt_err_t configure(struct rt_audio_device *audio, struct rt_audio_caps *c
 			case AUDIO_DSP_PARAM:
 			{
 				int samplerate;
+				rt_uint16_t channels;
 
 				samplerate = caps->udata.config.samplerate;
+				channels = caps->udata.config.channels;
 				sound->replay_config.samplerate = samplerate;
+				sound->replay_config.channels = channels;
 				LOG_I("set samplerate = %d", samplerate);
+				LOG_I("set channels = %d", channels);
 				stm32g0_dac_snd_samplerate_set(samplerate);
 				break;
 			}
