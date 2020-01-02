@@ -247,7 +247,9 @@ extern int8_t stm32g0_dac_snd_transfer(struct temp_sound *sound, uint8_t *dat, u
 		else
 			*p += 0x8000;
 
+#if(DAC_BITS==8)
 		*p >>= (16-DAC_BITS);
+#endif
 
 		p += ch;
 	}
@@ -256,7 +258,7 @@ extern int8_t stm32g0_dac_snd_transfer(struct temp_sound *sound, uint8_t *dat, u
 #if(DAC_BITS==8)
 	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_8B_R) != HAL_OK)
 #else
-	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_12B_R) != HAL_OK)
+	if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dat, point, DAC_ALIGN_12B_L) != HAL_OK)
 #endif
 	{
 //		return -1;
